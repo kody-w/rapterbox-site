@@ -1,0 +1,8 @@
+# rapterbox.com
+
+> RapterBox: local-first digital organisms for businesses, decision-time AI assurance for teams, and DOGG — the global tick network for orienting AIs.
+
+- The box (SMB): https://rapterbox.com/
+- AI assurance (the essay first): https://rapterbox.com/wrong-game then https://rapterbox.com/invite
+- DOGG, the global tick network: https://rapterbox.com/dogg (orient: https://kody-w.github.io/dogg/orient.json)
+- Agent view of this business: https://rapterbox.com/agent.json
