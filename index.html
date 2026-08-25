@@ -89,7 +89,7 @@ a{color:var(--go)}
     <p class="lede">The riffs, the decisions, the rule you made up on a call — all of it
     evaporates, because keeping the record is your job on top of the job.</p>
     <p style="font-size:21px;margin:0 0 28px"><b>Work gets done without you thinking about it.</b></p>
-    <a class="cta" href="#join">Get early access</a>
+    <a class="cta" href="#join">Join the waitlist</a>
     <p class="fine" style="margin-top:14px">A small box on your network. You own it, and the records.</p>
   </div>
 </section>
@@ -160,19 +160,20 @@ a{color:var(--go)}
 
 <section id="join">
   <div class="w">
-    <h2>Get early access</h2>
-    <p style="color:var(--dim);margin-top:0">Tell us what you would want it handling. We are
-    taking a small first group.</p>
+    <h2>Join the waitlist</h2>
+    <p style="color:var(--dim);margin-top:0">The waitlist is how priority is decided. When the
+    product fully launches, boxes go out in the order people joined — and the first group gets
+    set up with us directly.</p>
     <form id="f" method="POST" action="https://formspree.io/f/mgawgado">
       <label for="n">Name</label><input id="n" name="name" autocomplete="name" maxlength="100" required>
       <label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" required>
       <label for="u">What would you want it handling?</label>
       <textarea id="u" name="note" maxlength="2000" placeholder="the machines, agents, automations or admin you keep having to chase"></textarea>
       <input type="hidden" name="source" value="rapterbox.com">
-      <button id="b" type="submit">Get early access</button>
+      <button id="b" type="submit">Join the waitlist</button>
       <p class="fine" style="text-align:center;margin:12px 0 0">No newsletter. We write when there is something to say.</p>
     </form>
-    <div class="msg" id="ok">You're on the list — we'll be in touch before the first boxes ship.</div>
+    <div class="msg" id="ok">You're on the waitlist. You'll hear from us before the first boxes ship.</div>
     <div class="msg" id="no">That didn't send. Try again in a moment.</div>
   </div>
 </section>
@@ -190,7 +191,7 @@ f.addEventListener('submit',async ev=>{
     const r=await fetch(f.action,{method:'POST',body:new FormData(f),headers:{Accept:'application/json'}});
     if(!r.ok)throw 0;
     f.style.display='none';ok.style.display='block';
-  }catch(e){b.disabled=false;b.textContent='Get early access';no.style.display='block';}
+  }catch(e){b.disabled=false;b.textContent='Join the waitlist';no.style.display='block';}
 });
 </script>
 </body>
