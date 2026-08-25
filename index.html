@@ -8,6 +8,28 @@
 <meta property="og:title" content="RapterBox">
 <meta property="og:description" content="Work gets done without you thinking about it.">
 <meta property="og:type" content="website">
+<link rel="canonical" href="https://rapterbox.com/">
+<meta property="og:url" content="https://rapterbox.com/">
+<meta property="og:image" content="https://rapterbox.com/card.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"Organization","@id":"https://rapterbox.com/#org","name":"RapterBox LLC",
+  "url":"https://rapterbox.com/","description":"A small box on your network that runs a business's admin in the background and texts the owner only the decisions that are theirs."},
+ {"@type":"Product","name":"RapterBox","brand":{"@id":"https://rapterbox.com/#org"},
+  "description":"A fully transferable, perpetually growing digital twin of a business that the owner can talk to. It runs the admin overnight and sends one morning brief.",
+  "audience":{"@type":"Audience","audienceType":"Small business owners and operators"}},
+ {"@type":"FAQPage","mainEntity":[
+  {"@type":"Question","name":"Does it send emails or sign things for me?",
+   "acceptedAnswer":{"@type":"Answer","text":"No. It never sends, signs, pays or deletes on your behalf — there is no code path for those actions. A task needing one comes back to you as a decision, with the reversible work already finished."}},
+  {"@type":"Question","name":"What happens if it cannot see everything?",
+   "acceptedAnswer":{"@type":"Answer","text":"It refuses to act on partial evidence. It stops and says so rather than guessing confidently, because a confident wrong answer is worse than no answer."}},
+  {"@type":"Question","name":"What happens when the network drops?",
+   "acceptedAnswer":{"@type":"Answer","text":"It keeps working locally and reconciles when the connection returns. That is the right trade for a box in your office, and it means it is not a strongly consistent system."}},
+  {"@type":"Question","name":"Who owns the records?",
+   "acceptedAnswer":{"@type":"Answer","text":"You do. The box runs on your network and the records are append-only and verifiable without trusting us."}}]}]}
+</script>
+
 <style>
 :root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff;--ok:#3fb950;--warn:#e0a94a}
 @media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3;--ok:#1a7f37;--warn:#8a6100}}
@@ -79,7 +101,7 @@ a{color:var(--go)}
     app you have to open.</p>
 
     <div class="phone">
-      <div class="pbar"><span class="pdot"></span> RapterBox <span class="ptime">7:00 AM</span></div>
+      <div class="pbar"><span class="pdot"></span> <b>Northgate Property Co.</b> <span class="ptime">7:00 AM</span></div>
       <div class="bubble">
         <b>Tue 25 Aug — morning brief</b><br><br>
         <b>NEEDS YOU (3)</b><br>
@@ -98,8 +120,8 @@ a{color:var(--go)}
 
     <p>Three decisions, not forty notifications. Everything above the line is yours; everything
     below it was already done and can be checked.</p>
-    <p class="fine">It texts you from its own number — not from your account, and not one more
-    app asking for your attention.</p>
+    <p class="fine">It texts you <b>as your business</b>, from its own number — the twin is named
+    for your company, not for us. Not one more app asking for your attention.</p>
   </div>
 </section>
 
@@ -125,7 +147,9 @@ a{color:var(--go)}
       <li><b>It never sends, signs, pays or deletes on your behalf.</b> There is no code path for
       those. A task needing one comes back as a decision, with the safe part already done.</li>
       <li><b>It refuses to act on partial evidence.</b> If it cannot see everything, it stops and
-      says so rather than guessing confidently.</li>
+      says so rather than guessing confidently — the reason
+      <a href="/silent-failures">scheduled jobs fail silently on macOS</a> is that most tools do
+      the opposite.</li>
       <li><b>It keeps working when the network drops</b> and reconciles later. That is the right
       trade for a box in your office, and it is not a strongly consistent system.</li>
       <li><b>Agreement is evidence, not proof.</b> Machines that share a fault can agree and still

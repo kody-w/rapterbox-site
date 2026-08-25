@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why your scheduled job fails silently on macOS (and how to tell)</title>
+<meta name="description" content="A launchd job that texts you can hang forever on a permission prompt it cannot show — no error, no message, and the monitor still reports itself healthy. What causes it and how to detect it.">
+<link rel="canonical" href="https://rapterbox.com/silent-failures">
+<meta property="og:title" content="Why your scheduled job fails silently on macOS">
+<meta property="og:description" content="Silence looks identical to nothing happened. That is the dangerous part.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle",
+ "headline":"Why your scheduled job fails silently on macOS",
+ "description":"A launchd job driving Messages hangs on a TCC prompt it cannot display: 90 second timeout, no error, no message sent.",
+ "publisher":{"@type":"Organization","name":"RapterBox LLC","url":"https://rapterbox.com/"}}
+</script>
+<style>
+:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff;--warn:#e0a94a}
+@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3;--warn:#8a6100}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:44px 20px 80px}
+.w{max-width:720px;margin:0 auto}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.12;letter-spacing:-1px;margin:0 0 12px}
+.lede{color:var(--dim);font-size:19px;margin:0 0 26px}
+h2{font-size:22px;margin:36px 0 10px;letter-spacing:-.3px}
+p{margin:14px 0}
+pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px;overflow-x:auto;
+font:13px/1.6 ui-monospace,Menlo,monospace}
+code{font:13.5px ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+pre code{background:none;border:0;padding:0}
+.warn{border-left:3px solid var(--warn);padding-left:15px;color:var(--dim)}
+.cta{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:38px 0 0;text-decoration:none;color:inherit}
+.cta b{display:block;font-size:19px;margin-bottom:6px}
+.cta span{color:var(--dim)}
+.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
+a{color:var(--go)}
+</style>
+</head>
+<body><div class="w">
+
+<h1>Why your scheduled job fails silently on macOS</h1>
+<p class="lede">A background job that is supposed to text you can hang forever on a permission
+prompt it cannot display. No error. No message. And the monitor keeps reporting itself healthy.</p>
+
+<h2>What actually happens</h2>
+<p>Under <code>launchd</code>, a job that drives Messages through <code>osascript</code> blocks on a
+TCC Automation prompt. A background context has no way to show that prompt, so nothing resolves
+it. Measured on a real system: a <b>90 second timeout, no error returned, and no message sent.</b></p>
+<p>The failure is not the hang. It is that <b>silence looks identical to nothing happened.</b> A
+watchdog wired to text you would go completely quiet overnight while its own health check stayed
+green — the exact failure such a system exists to catch, sitting inside its own notification path.</p>
+
+<h2>The related trap: cron cannot reach your keychain</h2>
+<p>Jobs run from <code>cron</code> have no keychain access, so anything needing a stored credential
+fails with errors like <code>could not read Username: Device not configured</code>. And on recent
+macOS, scheduled jobs are blocked from reading <code>~/Documents</code> entirely, which produces a
+partial view of the filesystem rather than a clean permission error.</p>
+<p class="warn">A partial view is worse than no view. Code that sees half a directory usually
+concludes the missing half does not exist, and reports that conclusion confidently.</p>
+
+<h2>How to tell whether it is really working</h2>
+<p>Exit code zero is not delivery. To know a message actually arrived, check the store that
+records it rather than the tool that sent it:</p>
+<pre><code># osascript exiting 0 proves nothing was raised — not that anything was delivered.
+# Messages writes the row, so poll for the row.
+sqlite3 ~/Library/Messages/chat.db \
+  "select count(*) from message where is_from_me=1 and date > ?;"</code></pre>
+<p>Three rules that come out of this, in order of how much they save:</p>
+<ol>
+<li><b>Anything that pushes or sends belongs in a launchd agent, not cron</b> — and it needs a user
+session with Automation permission actually granted.</li>
+<li><b>Split sending in two.</b> A queue step that always succeeds and never blocks, and a drain
+step that only runs where permission exists. Undelivered items then accumulate <i>visibly</i>
+instead of evaporating.</li>
+<li><b>Never let a job report health it has not verified.</b> If it cannot see everything, it should
+stop and say so rather than converge on a partial view.</li>
+</ol>
+
+<h2>Why we know this</h2>
+<p>Because it happened to us. These are notes from running an estate of machines that watch each
+other, where a silent notification path is the one failure that cannot be tolerated.</p>
+
+<a class="cta" href="/">
+  <b>Work gets done without you thinking about it.</b>
+  <span>A RapterBox runs this kind of job overnight, refuses to claim success it has not verified,
+  and texts you one brief in the morning. Get early access →</span>
+</a>
+
+<div class="foot">
+  RapterBox LLC · <a href="/">home</a> · <a href="/ai">for AI agents</a>
+</div>
+</div></body></html>
