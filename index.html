@@ -3,126 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RapterBox — it wakes up and tells you what to do today</title>
+<title>RapterBox — work gets done without you thinking about it</title>
 <!-- LAUNCH SWITCH: delete the next line on launch day so the page can be indexed. -->
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="A small box on your network runs a room of AIs with declared jobs and tamper-evident records. Every morning it texts you what went wrong, why, the fix, and the decisions only you can make.">
+<meta name="description" content="A small box on your network runs your business admin in the background and texts you the two decisions only you can make.">
 <meta property="og:title" content="RapterBox">
-<meta property="og:description" content="A room of AIs that hold each other to what they said they would do. You get the morning memo.">
+<meta property="og:description" content="Work gets done without you thinking about it.">
 <style>
-:root{--bg:#0c0e12;--panel:#151922;--ink:#eaeef4;--muted:#9aa5b4;--line:#242b36;--ok:#3fb950;--accent:#7aa2ff;--warn:#e0a94a}
-@media (prefers-color-scheme: light){:root{--bg:#fcfcfd;--panel:#fff;--ink:#12161c;--muted:#5a6472;--line:#e3e7ee;--ok:#1a7f37;--accent:#0b5bd3;--warn:#8a6100}}
+:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff}
+@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.w{max-width:760px;margin:0 auto;padding:64px 22px 96px}
-h1{font-size:clamp(34px,6vw,52px);line-height:1.05;letter-spacing:-1.4px;margin:0 0 16px}
-.sub{font-size:21px;color:var(--muted);margin-bottom:34px}
-.cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:10px;font-size:16px}
-h2{font-size:25px;letter-spacing:-.4px;margin:56px 0 12px}
-p{margin:14px 0}
-.memo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin:30px 0;font:14px/1.7 ui-monospace,Menlo,monospace}
-.memo .t{color:var(--muted);font-size:12px;margin-bottom:10px}
-.memo .g{color:var(--warn);font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
-.card b{display:block;margin-bottom:6px}
-.card span{color:var(--muted);font-size:15px}
-form{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;margin:26px 0}
-label{display:block;font-size:14px;color:var(--muted);margin:12px 0 5px}
-input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:11px 13px;font:15px inherit}
-textarea{min-height:74px;resize:vertical}
-button{margin-top:16px;width:100%;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:13px;font:600 16px inherit;cursor:pointer}
-button:disabled{opacity:.6;cursor:wait}
-.fine{color:var(--muted);font-size:13.5px;margin-top:12px}
-.limits{border-left:3px solid var(--warn);padding-left:16px;color:var(--muted)}
-.foot{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
-a{color:var(--accent)}
-#ok{display:none;background:var(--panel);border:1px solid var(--ok);color:var(--ok);border-radius:12px;padding:20px;margin:26px 0;font-weight:600}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+display:flex;align-items:center;justify-content:center;min-height:100vh;padding:32px 20px}
+.w{max-width:520px;width:100%}
+h1{font-size:clamp(30px,6vw,42px);line-height:1.1;letter-spacing:-1.1px;margin:0 0 14px}
+.sub{color:var(--dim);font-size:18px;margin:0 0 12px}
+ul{list-style:none;padding:0;margin:0 0 26px;color:var(--dim);font-size:16px}
+li{padding:5px 0 5px 22px;position:relative}
+li:before{content:"→";position:absolute;left:0;color:var(--go)}
+form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+label{display:block;font-size:13px;color:var(--dim);margin:10px 0 5px}
+input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:11px 12px;font:15px inherit}
+textarea{min-height:62px;resize:vertical}
+button{margin-top:14px;width:100%;background:var(--go);color:#fff;border:0;border-radius:9px;padding:13px;font:600 16px inherit;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.fine{color:var(--dim);font-size:12.5px;margin-top:10px;text-align:center}
+.msg{display:none;border-radius:12px;padding:18px;margin-top:14px;font-weight:600;text-align:center}
+#ok{border:1px solid #3fb950;color:#3fb950}
+#no{border:1px solid #e0a94a;color:#e0a94a}
+.foot{margin-top:22px;color:var(--dim);font-size:12.5px;text-align:center}
+a{color:var(--go)}
 </style>
 </head>
 <body>
 <div class="w">
-  <h1>It wakes up and tells you what to do today.</h1>
-  <div class="sub">A small box on your network runs a room of AIs with declared jobs. They hold each
-  other to what they said they would do — and every morning it texts you the memo.</div>
-  <a class="cta" href="#join">Join the first neighborhood</a>
-
-  <div class="memo">
-    <div class="t">the morning memo — 7:02 AM</div>
-    rv_world_merging &nbsp;<span class="g">chronic</span> — last merge 62h ago<br>
-    &nbsp;&nbsp;root cause: the gate stopped and never rejected<br>
-    &nbsp;&nbsp;fix applied: re-armed, verified<br><br>
-    alert_delivery &nbsp;<span class="g">found</span> — your alarms were being sent twice<br>
-    &nbsp;&nbsp;485 texts, the same one 60 times. Quieted.<br><br>
-    <b>decisions only you can make (2)</b>
-  </div>
-
-  <h2>Everyone else sells an AI that does tasks while you watch</h2>
-  <p>RapterBox sells the layer above that. You write the job and the boundaries. A faculty of
-  AIs does the work and checks each other's. A Principal sits in on them and grades the
-  faculty. You read one memo and make the two decisions that are actually yours.</p>
-
-  <div class="grid">
-    <div class="card"><b>Declared jobs</b><span>Every watcher says what it is for. A collective whose purpose never once succeeded gets caught.</span></div>
-    <div class="card"><b>Peers verify peers</b><span>Independent machines derive the same fact separately. Disagreement is the finding.</span></div>
-    <div class="card"><b>Tamper-evident records</b><span>Append-only chains you can verify without trusting us. Nobody edits history — not even us.</span></div>
-    <div class="card"><b>Local-first</b><span>It runs on your network. We never hold your credentials, and you own the box and the records.</span></div>
-  </div>
-
-  <h2 id="join">Join the first neighborhood</h2>
-  <p>Early buyers get a box, the Care tier, and a weekly Principal's report we review with you.
-  Tell us what you would point it at.</p>
+  <h1>Work gets done without you thinking about it.</h1>
+  <p class="sub">You are already begging your tools to remember what you said. A RapterBox is a
+  small box on your network that runs the admin in the background — and texts you only the
+  decisions that are actually yours.</p>
+  <ul>
+    <li>The paper trail builds itself while you talk</li>
+    <li>One message each morning, not a dashboard</li>
+    <li>Runs on your network. You own the box and the records</li>
+  </ul>
 
   <form id="f" method="POST" action="__SIGNUP_ENDPOINT__">
     <label for="n">Name</label><input id="n" name="name" autocomplete="name" required>
     <label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" required>
-    <label for="u">What would you point it at?</label>
-    <textarea id="u" name="note" placeholder="the machines, agents or automations you would want watched"></textarea>
-    <input type="hidden" name="source" value="launch-page">
-    <button id="b" type="submit">Request an invite</button>
+    <label for="u">What would you want it handling? (optional)</label>
+    <textarea id="u" name="note"></textarea>
+    <input type="hidden" name="source" value="rapterbox.com">
+    <button id="b" type="submit">Get early access</button>
     <div class="fine">No newsletter. We write when there is something to say.</div>
   </form>
-  <div id="nolive" style="display:none;background:var(--panel);border:1px solid var(--warn);color:var(--warn);border-radius:12px;padding:18px;margin:20px 0">
-    The waitlist isn't accepting submissions from this page yet. Find us on Product Hunt on launch day.</div>
-  <div id="ok">You're on the list. We'll be in touch before the first boxes ship.</div>
+  <div class="msg" id="ok">You're on the list — we'll be in touch.</div>
+  <div class="msg" id="no">Not accepting signups from this page yet. Try again shortly.</div>
 
-  <h2>What we tell you before you buy</h2>
-  <div class="limits">
-    <p><b>Agreement is evidence, not proof.</b> Machines that share a defect can agree and still
-    be wrong. We spread the checks across different systems on purpose, and we report how
-    independent they actually are instead of hiding it behind a score.</p>
-    <p><b>It grades, suggests and waits.</b> It does not sign things, spend money, or decide for
-    you. The decisions stay yours — that is the design, not a limitation we plan to remove.</p>
-    <p><b>It keeps working when the network drops</b>, and reconciles when it comes back. That is
-    the right trade for a box in your office. It is not a strongly consistent system.</p>
-  </div>
-
-  <div class="foot">
-    RapterBox LLC · One RapterBox, many RapterBoxes.<br>
-    Built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation — credited, not claimed.
-  </div>
+  <div class="foot">RapterBox LLC · built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation</div>
 </div>
 <script>
-// Progressive: if no endpoint is configured yet, fall back to mail so the page is never a dead end.
-const f = document.getElementById('f'), b = document.getElementById('b'), ok = document.getElementById('ok');
-f.addEventListener('submit', async (ev) => {
-  const action = f.getAttribute('action') || '';
-  if (!action || action.indexOf('__') === 0) {
-    // No endpoint wired yet. Say so plainly rather than publishing an address for scrapers.
-    ev.preventDefault();
-    b.textContent = 'not live yet';
-    document.getElementById('nolive').style.display = 'block';
-    return;
-  }
-  ev.preventDefault(); b.disabled = true; b.textContent = 'sending…';
-  try {
-    const r = await fetch(action, { method: 'POST', body: new FormData(f), headers: { Accept: 'application/json' } });
-    if (!r.ok) throw new Error('bad status');
-    f.style.display = 'none'; ok.style.display = 'block';
-  } catch (e) {
-    b.disabled = false; b.textContent = 'Request an invite';
-    document.getElementById('nolive').style.display = 'block';
-  }
+const f=document.getElementById('f'),b=document.getElementById('b'),ok=document.getElementById('ok'),no=document.getElementById('no');
+f.addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const action=f.getAttribute('action')||'';
+  if(!action||action.indexOf('__')===0){no.style.display='block';return;}
+  b.disabled=true;b.textContent='sending...';
+  try{
+    const r=await fetch(action,{method:'POST',body:new FormData(f),headers:{Accept:'application/json'}});
+    if(!r.ok)throw 0;
+    f.style.display='none';no.style.display='none';ok.style.display='block';
+  }catch(e){b.disabled=false;b.textContent='Get early access';no.style.display='block';}
 });
 </script>
 </body>
