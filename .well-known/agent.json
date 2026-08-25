@@ -55,5 +55,16 @@
     "pattern": "one stream, one writer \u2014 others federate as equal streams",
     "prior_art": "https://kody-w.github.io/dogg/",
     "spec": "https://github.com/kody-w/rapp-1"
+  },
+  "access_tiers": {
+    "url": "https://rapterbox.com/tiers.json",
+    "summary": {
+      "T0 GLOBAL": "anyone, no account \u2014 identity, offers, published lessons (this document)",
+      "T1 AUTHENTICATED": "a named GitHub account with READ on the private DOGG",
+      "T2 COLLABORATOR": "a named GitHub account with WRITE \u2014 twin-to-twin collaboration",
+      "T3 PRIVATE": "this twin alone; never published at any tier"
+    },
+    "how_to_request": "Ask this business to add your GitHub account to their private DOGG as a read (T1) or write (T2) collaborator. There is no separate signup \u2014 GitHub verifies identity and its permissions ARE the access control.",
+    "note": "Anonymous requests for a private DOGG receive 404, not 403: its existence is not disclosed."
   }
 }

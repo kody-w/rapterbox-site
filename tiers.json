@@ -1,0 +1,38 @@
+{
+  "spec": "rapp/1",
+  "kind": "twin.tiers",
+  "what_this_is": "How far into this twin a given identity can reach. GitHub verifies identity and expresses access as repository permissions; the twin borrows both rather than inventing an auth system.",
+  "tiers": {
+    "T0": {
+      "name": "GLOBAL",
+      "who": "anyone, no account",
+      "mechanism": "public GitHub repo + GitHub Pages",
+      "gate": "publish gate must pass; manual opt-in per stream"
+    },
+    "T1": {
+      "name": "AUTHENTICATED",
+      "who": "a named GitHub account with read access",
+      "mechanism": "private repo, counterparty added as a read collaborator",
+      "gate": "publish gate must pass; existence is hidden from everyone else (404)"
+    },
+    "T2": {
+      "name": "COLLABORATOR",
+      "who": "a named GitHub account with write access",
+      "mechanism": "private repo, counterparty added as a write collaborator",
+      "gate": "scoped by an explicit meeting grant; both sides can append"
+    },
+    "T3": {
+      "name": "PRIVATE",
+      "who": "this twin alone",
+      "mechanism": "local only, no remote, excluded from every egg",
+      "gate": "never published at any tier; queryable only by the twin"
+    }
+  },
+  "rules": [
+    "a stream's tier is declared, never inferred",
+    "promotion toward GLOBAL is manual and one-way \u2014 nothing becomes public by drift",
+    "the publish gate runs at every boundary regardless of intent",
+    "T3 is never published at any tier, for any counterparty, under any grant"
+  ],
+  "to_request_access": "Ask the business to add your GitHub account to the private DOGG as a read collaborator (T1) or a write collaborator (T2). There is nothing else to sign up for."
+}
