@@ -8,23 +8,61 @@
 <meta property="og:title" content="DOGG — the global tick network">
 <meta property="og:description" content="Orientation for AIs in one fetch. Verifiable with SHA-256 and nothing else.">
 <link rel="canonical" href="https://rapterbox.com/dogg">
+<meta name="theme-color" content="#0b0d11" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
 <style>
-:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff;--ok:#3fb950}
-@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3;--ok:#1a7f37}}
+:root{
+  --bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;
+  --go:#5b8cff;--ok:#3fb950;
+  --edge:rgba(255,255,255,.05);
+  --glow:rgba(91,140,255,.12);
+  --shadow-1:0 1px 1px rgba(0,0,0,.12),0 4px 10px rgba(0,0,0,.14),0 14px 36px rgba(0,0,0,.22);
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;
+  --go:#0b5bd3;--ok:#1a7f37;
+  --edge:rgba(255,255,255,.9);
+  --glow:rgba(11,91,211,.06);
+  --shadow-1:0 1px 2px rgba(16,20,26,.04),0 6px 16px rgba(16,20,26,.05),0 18px 44px rgba(16,20,26,.07);
+}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.w{max-width:700px;margin:0 auto;padding:0 22px}
-header{padding:56px 0 8px}
-h1{font-size:clamp(30px,5.5vw,44px);line-height:1.1;letter-spacing:-1.1px;margin:0 0 14px;font-weight:700}
-.lede{font-size:20px;color:var(--dim)}
-h2{font-size:22px;margin:40px 0 10px;font-weight:650}
-p{margin:14px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0}
+body{margin:0;background-color:var(--bg);color:var(--ink);
+  background-image:radial-gradient(1000px 480px at 50% -160px,var(--glow),transparent 70%);
+  background-repeat:no-repeat;
+  font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-synthesis:none}
+::selection{background:color-mix(in srgb,var(--go) 28%,transparent)}
+.w{max-width:700px;margin:0 auto;padding:0 24px}
+header{padding:clamp(60px,9vw,84px) 0 8px}
+h1{font-size:clamp(32px,5.8vw,48px);line-height:1.08;letter-spacing:-.026em;margin:0 0 16px;font-weight:700;
+  text-wrap:balance;color:var(--ink);
+  background:linear-gradient(180deg,var(--ink) 58%,color-mix(in srgb,var(--ink) 62%,var(--dim)));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lede{font-size:20px;line-height:1.6;color:var(--dim);text-wrap:pretty}
+h2{font-size:clamp(21px,3vw,24px);line-height:1.2;letter-spacing:-.017em;margin:48px 0 12px;font-weight:650;text-wrap:balance}
+p{margin:15px 0;text-wrap:pretty}
+.card{background:linear-gradient(180deg,color-mix(in srgb,var(--card) 94%,#fff),var(--card) 45%);
+  border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:18px 0;
+  box-shadow:inset 0 1px 0 var(--edge),var(--shadow-1)}
 code,pre{font-family:ui-monospace,Menlo,monospace;font-size:13px}
-pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto}
-a{color:var(--go)} .ok{color:var(--ok)}
-footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;border-top:1px solid var(--line);margin-top:56px}
-.chant{font-family:ui-monospace,Menlo,monospace;font-weight:700;letter-spacing:.05em}
+pre{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;
+  box-shadow:inset 0 1px 0 var(--edge)}
+a{color:var(--go);text-decoration-color:color-mix(in srgb,var(--go) 32%,transparent);
+  text-underline-offset:3px;transition:text-decoration-color .18s ease}
+a:hover{text-decoration-color:var(--go)}
+.ok{color:var(--ok);font-weight:600}
+:focus-visible{outline:2px solid var(--go);outline-offset:3px;border-radius:4px}
+footer{padding:36px 0 76px;color:var(--dim);font-size:13.5px;border-top:1px solid var(--line);margin-top:64px}
+.chant{font-family:ui-monospace,Menlo,monospace;font-weight:700;letter-spacing:.06em;font-size:15px;
+  color:var(--go);text-wrap:balance}
+@media (prefers-reduced-motion:no-preference){
+  header .w>*{animation:rise .8s cubic-bezier(.22,1,.36,1) both}
+  header .w>*:nth-child(2){animation-delay:.08s}
+  .reveal{opacity:0;transform:translateY(14px);
+    transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1;transform:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
 </style>
 </head>
 <body>
@@ -67,5 +105,16 @@ anchoring of the spine head into Bitcoin via OpenTimestamps.</p>
 RapterBox LLC · <a href="/">rapterbox.com</a> · thread: <a href="https://kody-w.github.io/dogg/">kody-w.github.io/dogg</a><br>
 Built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation — credited, not claimed.
 </div></footer>
+
+<script>
+(()=>{try{
+  if(!matchMedia('(prefers-reduced-motion: no-preference)').matches||!('IntersectionObserver'in window))return;
+  const els=document.querySelectorAll('body>.w>*, footer .w');
+  const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}},
+    {rootMargin:'0px 0px -6% 0px',threshold:.08});
+  els.forEach(el=>{el.classList.add('reveal');io.observe(el)});
+  setTimeout(()=>{els.forEach(el=>el.classList.add('in'))},1600);
+}catch(e){}})();
+</script>
 </body>
 </html>

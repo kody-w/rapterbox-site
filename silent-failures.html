@@ -8,6 +8,8 @@
 <link rel="canonical" href="https://rapterbox.com/silent-failures">
 <meta property="og:title" content="Why your scheduled job fails silently on macOS">
 <meta property="og:description" content="Silence looks identical to nothing happened. That is the dangerous part.">
+<meta name="theme-color" content="#0b0d11" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"TechArticle",
  "headline":"Why your scheduled job fails silently on macOS",
@@ -15,25 +17,67 @@
  "publisher":{"@type":"Organization","name":"RapterBox LLC","url":"https://rapterbox.com/"}}
 </script>
 <style>
-:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff;--warn:#e0a94a}
-@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3;--warn:#8a6100}}
+:root{
+  --bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;
+  --go:#5b8cff;--warn:#e0a94a;
+  --edge:rgba(255,255,255,.05);
+  --glow:rgba(91,140,255,.12);
+  --shadow-1:0 1px 1px rgba(0,0,0,.12),0 4px 10px rgba(0,0,0,.14),0 14px 36px rgba(0,0,0,.22);
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;
+  --go:#0b5bd3;--warn:#8a6100;
+  --edge:rgba(255,255,255,.9);
+  --glow:rgba(11,91,211,.06);
+  --shadow-1:0 1px 2px rgba(16,20,26,.04),0 6px 16px rgba(16,20,26,.05),0 18px 44px rgba(16,20,26,.07);
+}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:44px 20px 80px}
+body{margin:0;background-color:var(--bg);color:var(--ink);
+  background-image:radial-gradient(1000px 480px at 50% -160px,var(--glow),transparent 70%);
+  background-repeat:no-repeat;
+  font:17px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-synthesis:none;
+  padding:clamp(48px,8vw,72px) 22px 84px}
+::selection{background:color-mix(in srgb,var(--go) 28%,transparent)}
 .w{max-width:720px;margin:0 auto}
-h1{font-size:clamp(28px,5vw,40px);line-height:1.12;letter-spacing:-1px;margin:0 0 12px}
-.lede{color:var(--dim);font-size:19px;margin:0 0 26px}
-h2{font-size:22px;margin:36px 0 10px;letter-spacing:-.3px}
-p{margin:14px 0}
-pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px;overflow-x:auto;
-font:13px/1.6 ui-monospace,Menlo,monospace}
-code{font:13.5px ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+h1{font-size:clamp(30px,5.2vw,42px);line-height:1.1;letter-spacing:-.025em;margin:0 0 14px;font-weight:700;
+  text-wrap:balance;color:var(--ink);
+  background:linear-gradient(180deg,var(--ink) 58%,color-mix(in srgb,var(--ink) 62%,var(--dim)));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lede{color:var(--dim);font-size:19px;line-height:1.6;margin:0 0 30px;text-wrap:pretty}
+h2{font-size:clamp(21px,3vw,24px);line-height:1.2;margin:44px 0 12px;letter-spacing:-.017em;font-weight:650;text-wrap:balance}
+p{margin:15px 0;text-wrap:pretty}
+pre{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;
+  font:13px/1.6 ui-monospace,Menlo,monospace;box-shadow:inset 0 1px 0 var(--edge)}
+code{font:13.5px ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:1px 5px}
 pre code{background:none;border:0;padding:0}
-.warn{border-left:3px solid var(--warn);padding-left:15px;color:var(--dim)}
-.cta{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:38px 0 0;text-decoration:none;color:inherit}
-.cta b{display:block;font-size:19px;margin-bottom:6px}
+.warn{border-left:3px solid var(--warn);padding:12px 16px;color:var(--dim);
+  background:color-mix(in srgb,var(--warn) 6%,transparent);border-radius:0 12px 12px 0}
+ol{padding-left:22px}
+ol li{margin:10px 0}
+.cta{display:block;background:linear-gradient(180deg,color-mix(in srgb,var(--card) 94%,#fff),var(--card) 45%);
+  border:1px solid var(--line);border-radius:18px;padding:24px 26px;margin:44px 0 0;text-decoration:none;color:inherit;
+  box-shadow:inset 0 1px 0 var(--edge),var(--shadow-1);
+  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s cubic-bezier(.22,1,.36,1),border-color .3s ease}
+.cta:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--go) 40%,var(--line));
+  box-shadow:inset 0 1px 0 var(--edge),0 2px 4px rgba(0,0,0,.14),0 14px 40px rgba(0,0,0,.24)}
+.cta:active{transform:scale(.99);transition-duration:.1s}
+.cta b{display:block;font-size:19px;letter-spacing:-.015em;margin-bottom:6px}
 .cta span{color:var(--dim)}
-.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
-a{color:var(--go)}
+.foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
+a{color:var(--go);text-decoration-color:color-mix(in srgb,var(--go) 32%,transparent);
+  text-underline-offset:3px;transition:text-decoration-color .18s ease}
+a:hover{text-decoration-color:var(--go)}
+a.cta{text-decoration:none;color:inherit}
+:focus-visible{outline:2px solid var(--go);outline-offset:3px;border-radius:4px}
+@media (prefers-reduced-motion:no-preference){
+  .w>*:nth-child(-n+2){animation:rise .8s cubic-bezier(.22,1,.36,1) both}
+  .w>*:nth-child(2){animation-delay:.08s}
+  .reveal{opacity:0;transform:translateY(14px);
+    transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1;transform:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
 </style>
 </head>
 <body><div class="w">
@@ -89,4 +133,16 @@ other, where a silent notification path is the one failure that cannot be tolera
 <div class="foot">
   RapterBox LLC · <a href="/">home</a> · <a href="/ai">for AI agents</a>
 </div>
-</div></body></html>
+</div>
+
+<script>
+(()=>{try{
+  if(!matchMedia('(prefers-reduced-motion: no-preference)').matches||!('IntersectionObserver'in window))return;
+  const els=document.querySelectorAll('.w>*:nth-child(n+3)');
+  const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}},
+    {rootMargin:'0px 0px -6% 0px',threshold:.08});
+  els.forEach(el=>{el.classList.add('reveal');io.observe(el)});
+  setTimeout(()=>{els.forEach(el=>el.classList.add('in'))},1600);
+}catch(e){}})();
+</script>
+</body></html>
