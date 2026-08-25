@@ -24,6 +24,15 @@ p{margin:14px 0}
 .cta{display:inline-block;background:var(--go);color:#fff;text-decoration:none;font-weight:600;padding:14px 30px;border-radius:10px;font-size:16.5px}
 .fine{color:var(--dim);font-size:13px}
 .mono{font:13.5px/1.7 ui-monospace,Menlo,monospace}
+.phone{max-width:420px;margin:26px auto;background:var(--card);border:1px solid var(--line);
+border-radius:22px;padding:14px 14px 10px;box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.pbar{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px;
+padding:2px 6px 12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.pdot{width:22px;height:22px;border-radius:50%;background:var(--go);display:inline-block;flex:none}
+.ptime{margin-left:auto}
+.bubble{background:var(--bg);border:1px solid var(--line);border-radius:18px 18px 18px 5px;
+padding:15px 17px;font:13.5px/1.72 ui-monospace,Menlo,monospace;max-width:100%;overflow-x:auto}
+.pfoot{text-align:right;color:var(--dim);font-size:11.5px;padding:8px 6px 0}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:22px 0}
 .panel .cap{color:var(--dim);font-size:12px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:12px}
 .tag{color:var(--warn);font-weight:600}
@@ -65,23 +74,32 @@ a{color:var(--go)}
 
 <section>
   <div class="w">
-    <h2>This arrives at 7am. You do nothing to make it happen.</h2>
-    <p style="color:var(--dim);margin-top:0">A real memo, redacted. Not a mockup.</p>
-    <div class="panel mono">
-      <div class="cap">morning brief — tue 25 aug</div>
-      NEEDS YOU (3)<br>
-      &nbsp;&nbsp;• <span class="tag">compliance</span> — subscription lapses in 6 days<br>
-      &nbsp;&nbsp;• <span class="tag">legal</span> — provisional conversion deadline on file<br>
-      &nbsp;&nbsp;• <span class="tag">money</span> — invoice unpaid 21 days<br><br>
-      HANDLED WHILE YOU SLEPT<br>
-      &nbsp;&nbsp;<span class="ok">✓</span> 63 drift findings repaired across 4 machines<br>
-      &nbsp;&nbsp;<span class="ok">✓</span> duplicate alerts found and quieted — 485 texts → 95<br>
-      &nbsp;&nbsp;<span class="ok">✓</span> 12 records appended, 0 broken<br><br>
-      QUIETED<br>
-      &nbsp;&nbsp;41 things that did not need you
+    <h2>This arrives as a text at 7am. You do nothing to make it happen.</h2>
+    <p style="color:var(--dim);margin-top:0">A real brief, redacted. Not a mockup — and not an
+    app you have to open.</p>
+
+    <div class="phone">
+      <div class="pbar"><span class="pdot"></span> RapterBox <span class="ptime">7:00 AM</span></div>
+      <div class="bubble">
+        <b>Tue 25 Aug — morning brief</b><br><br>
+        <b>NEEDS YOU (3)</b><br>
+        • <span class="tag">compliance</span> — subscription lapses in 6 days<br>
+        • <span class="tag">legal</span> — provisional conversion deadline on file<br>
+        • <span class="tag">money</span> — invoice unpaid 21 days<br><br>
+        <b>HANDLED WHILE YOU SLEPT</b><br>
+        <span class="ok">✓</span> 63 drift findings repaired across 4 machines<br>
+        <span class="ok">✓</span> duplicate alerts quieted — 485 texts → 95<br>
+        <span class="ok">✓</span> 12 records appended, 0 broken<br><br>
+        <b>QUIETED</b><br>
+        41 things that did not need you
+      </div>
+      <div class="pfoot">Delivered</div>
     </div>
+
     <p>Three decisions, not forty notifications. Everything above the line is yours; everything
     below it was already done and can be checked.</p>
+    <p class="fine">It texts you from its own number — not from your account, and not one more
+    app asking for your attention.</p>
   </div>
 </section>
 
