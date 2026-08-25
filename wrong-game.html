@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You're testing your AI at the wrong moment</title>
+<meta name="description" content="Evals, benchmarks and red-teams all happen before the moment that matters. The risk lives at decision time — and at decision time, most teams are trusting a single model on its own word.">
+<meta property="og:title" content="You're testing your AI at the wrong moment">
+<meta property="og:description" content="The risk lives at decision time. That's the one moment nobody is testing.">
+<meta property="og:type" content="article">
+<link rel="canonical" href="https://rapterbox.com/wrong-game">
+<style>
+:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff;--ok:#3fb950;--warn:#e0a94a}
+@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3;--ok:#1a7f37;--warn:#8a6100}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.w{max-width:700px;margin:0 auto;padding:0 22px}
+header{padding:56px 0 8px}
+h1{font-size:clamp(30px,5.5vw,44px);line-height:1.1;letter-spacing:-1.1px;margin:0 0 14px;font-weight:700}
+.lede{font-size:20px;color:var(--dim)}
+h2{font-size:23px;letter-spacing:-.3px;margin:44px 0 12px;font-weight:650}
+p{margin:14px 0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:24px 0}
+.panel .cap{color:var(--dim);font-size:12px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:10px}
+.cta{display:inline-block;background:var(--go);color:#fff;text-decoration:none;font-weight:600;padding:13px 26px;border-radius:10px;font-size:16px;margin:8px 0 0}
+.fine{color:var(--dim);font-size:13.5px}
+a{color:var(--go)}
+footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;border-top:1px solid var(--line);margin-top:56px}
+em{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header><div class="w">
+<h1>You're testing your AI at the wrong moment.</h1>
+<p class="lede">If your agents are in production and something still feels unprovable,
+this is probably why.</p>
+</div></header>
+
+<div class="w">
+
+<p>Here is the question that actually brought you here: <em>why is what we're doing not
+working?</em> You ran the evals. You bought the benchmark story. Someone red-teamed the
+prompts. The scores were fine. And yet nobody on your team can look Risk, Audit, or a
+regulator in the eye and say "that specific answer, the one that shipped on Tuesday, was
+checked" — because it wasn't.</p>
+
+<h2>The old game</h2>
+<p>The way nearly every team runs AI today: test hard <em>before</em> deployment, then
+trust completely <em>after</em> it. Evals, benchmarks, red-teams — all of it happens at
+build time, on sample inputs, against yesterday's model. Then the system goes live, and
+from that moment every real answer is produced by a single model, on its own word, with
+nobody checking.</p>
+
+<p>That structure fails for two reasons, and neither is fixable with better evals.</p>
+
+<p><b>First: an eval score is a photograph, not a guarantee.</b> It tells you how the
+model did on the questions you thought to ask, before your users asked the real ones.
+The input that hurts you is by definition the one that wasn't in the set.</p>
+
+<p><b>Second: a model cannot catch its own miss.</b> When a model is wrong, it is wrong
+<em>confidently</em> — the same machinery that produced the error produces the
+justification. Asking the model to double-check itself, or grading it with a judge built
+from the same lineage, stacks copies of the same blind spot. Systems that share a fault
+agree — and are wrong together.</p>
+
+<p>So the risk was never at build time. It lives at <em>decision time</em> — the moment
+an agent's answer is about to become an action, a filing, a price, a denial. And decision
+time is the one moment the old game leaves completely untested.</p>
+
+<h2>The new game</h2>
+<p>Flip the moment. Keep your build-time testing — it's hygiene — but put the real check
+where the real risk is:</p>
+
+<div class="panel">
+<div class="cap">Decision-time verification</div>
+<p style="margin-top:0">When an answer matters, it doesn't ship on one model's word — it
+gets independently checked before it becomes an action, and a wrong answer gets stopped
+in front of a human <em>before</em> it ships, not in the post-mortem.</p>
+<p style="margin-bottom:0">The point isn't the checking. The point is the <em>record</em>:
+every checked decision leaves an audit-grade trail, so "was this validated?" gets
+answered with evidence instead of vibes.</p>
+</div>
+
+<p>Notice what this changes for the person who has to sign things. "Our eval scores were
+strong" is an argument. "Here is the verification record for that decision" is an
+answer. Compliance conversations end differently when the artifact exists.</p>
+
+<p>And notice what it costs: a real check on the answers that matter, instead of a
+perfect-looking dashboard over the ones that don't. Teams that verify everything verify
+nothing — the discipline is choosing the consequential decisions and holding that line.</p>
+
+<h2>If this is your situation</h2>
+<p>If your agents make decisions that matter, and "prove it was checked" is a question
+you'll eventually be asked — we work on exactly this, with a small number of teams, and
+we'd rather tell you up front whether you're a fit than get you on a call.</p>
+<a class="cta" href="/invite">Read the invitation — including who it's not for</a>
+<p class="fine">No form on this page. Nothing to book. The next page tells you everything,
+then you decide.</p>
+
+</div>
+
+<footer><div class="w">
+RapterBox LLC · <a href="/">rapterbox.com</a> · <a href="/silent-failures">why scheduled jobs fail silently</a><br>
+Built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation — credited, not claimed.
+</div></footer>
+</body>
+</html>
