@@ -1,0 +1,22 @@
+{
+  "spec": "rapp/1",
+  "kind": "lesson.published",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 2,
+  "utc": "2026-08-25T16:06:21.170Z",
+  "payload": {
+    "slug": "verify-before-replace",
+    "title": "Never replace a live page before checking what it captures",
+    "question": "redesigned landing page and lost signups",
+    "symptom": "A better looking page ships and enquiries quietly stop.",
+    "cause": "The old page was doing something invisible in the markup \u2014 a form wired to a vendor inbox, a chat widget, a tracking hook \u2014 and the replacement did not carry it.",
+    "measured": "A form endpoint present on the old builder page was absent from the replacement. Every visitor in that window hit a dead form and left no trace.",
+    "fix": "Before migrating any customer-facing surface, enumerate what it captures, sends and receives, and prove the replacement does the same BEFORE cutover.",
+    "why_it_matters": "A prettier page that captures nothing is strictly worse than an ugly one that captures, and the loss is invisible because non-events are not logged."
+  },
+  "payload_hash": "3ccb74f9a134ed5f04d182a75bcdf5572f2048a7bc7ef1f9bc6a6f73be7e3c8a",
+  "prev": "816ad4a24f013cdbe0b5e02771866d63f3d7ee344e37db7f0b165267952dca3d",
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "bbb0287075d9de6295f57d5cfe11f8d27d6452566023fd43ef4ff61702fbc1ec"
+}

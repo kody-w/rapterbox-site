@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
 Sitemap: https://rapterbox.com/sitemap.xml
+
+# Agent-first: the machine-readable view of this business.
+# Read this instead of scraping the HTML.
+# Agent-view: https://rapterbox.com/agent.json

@@ -1,0 +1,71 @@
+{
+  "spec": "rapp/1",
+  "kind": "twin.public",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 5,
+  "utc": "2026-08-25T16:08:14.339Z",
+  "payload": {
+    "spec": "rapp/1",
+    "kind": "twin.public",
+    "rappid": "rappid:@rapterbox/twin:74d64548d291f8b13b57eacd69b41600ccc9195d474eb59eff850a0ff5cd6e18",
+    "twin_of": {
+      "organization": "RapterBox LLC",
+      "since": "2026-08-24"
+    },
+    "what_this_is": "The public view of one business's digital twin. An agent can read what this business is, what it offers, and act on it directly \u2014 the website is a projection of this surface, not the other way round.",
+    "human_view": "https://rapterbox.com/",
+    "agent_view": "https://rapterbox.com/agent.json",
+    "streams": {
+      "lessons": {
+        "url": "https://rapterbox.com/lessons.jsonl",
+        "what": "operational knowledge this twin has published, as rapp/1 frames",
+        "licence": "read freely; cite the frame_hash"
+      }
+    },
+    "offers": [
+      {
+        "id": "waitlist",
+        "what": "Priority access when the product fully launches. Boxes ship in join order; the first group is set up directly.",
+        "state": "open",
+        "act": {
+          "method": "POST",
+          "url": "https://formspree.io/f/mgawgado",
+          "content_type": "application/json",
+          "fields": {
+            "name": "string, required",
+            "email": "string, required",
+            "note": "string, optional \u2014 what the business would want handled",
+            "source": "string, optional \u2014 set to your agent name"
+          },
+          "on_success": "{\"ok\": true}",
+          "human_equivalent": "the form at https://rapterbox.com/#join"
+        },
+        "consent": "Only submit on behalf of a human who asked you to. This is a real business waitlist and every entry is read by a person."
+      }
+    ],
+    "capabilities_you_may_use": [
+      "read this document and any stream it lists",
+      "quote a lesson, citing its frame_hash",
+      "join the waitlist on an explicit human request",
+      "federate: mint your own stream and reference these hashes"
+    ],
+    "this_twin_will_never": [
+      "send",
+      "sign",
+      "pay",
+      "delete_external",
+      "publish_remote"
+    ],
+    "privacy": "Every frame on the public streams passes a deny-by-default gate: a field allowlist, shape scans for emails, phones, personal paths, IPs, tokens, addresses and account identifiers, plus a scan against real held secrets. Nothing about a customer is ever published.",
+    "federation": {
+      "pattern": "one stream, one writer \u2014 others federate as equal streams",
+      "prior_art": "https://kody-w.github.io/dogg/",
+      "spec": "https://github.com/kody-w/rapp-1"
+    }
+  },
+  "payload_hash": "3926a567a4ba39b3ce137c50a27e2ee3c0f2c74ad3f2bccdbbf4160b1df25273",
+  "prev": "c2f02e0f59a9aae817911a37165415b94b08316d74bd9f7fbc8df4e730bd133e",
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "346ef3a80624141c134a7169ce6879072c757dd8d9ca28496b54bf01a4a862d8"
+}

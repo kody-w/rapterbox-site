@@ -1,0 +1,22 @@
+{
+  "spec": "rapp/1",
+  "kind": "lesson.published",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 3,
+  "utc": "2026-08-25T16:06:21.174Z",
+  "payload": {
+    "slug": "partial-evidence",
+    "title": "Why a partial view is more dangerous than no view",
+    "question": "script sees only some files and reports success",
+    "symptom": "A scan or sync reports clean results that are quietly wrong.",
+    "cause": "Recent macOS blocks scheduled jobs from protected directories, and the block presents as absence rather than as a permission error. Code that sees half a directory concludes the other half does not exist.",
+    "measured": "A convergence loop declared success against a filesystem it could only partly read.",
+    "fix": "Make jobs assert what they could not read, and refuse to conclude when the evidence is incomplete. Report degraded rather than clean.",
+    "why_it_matters": "No answer is recoverable. A confident wrong answer propagates into everything downstream that trusted it."
+  },
+  "payload_hash": "aea4432a74d457646506b8c7c1ffd43774380138176cecb8b0ddcedd929fb884",
+  "prev": "3ccb74f9a134ed5f04d182a75bcdf5572f2048a7bc7ef1f9bc6a6f73be7e3c8a",
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "3198dc1ea625974407acf3ce7654d57605a78bd576f3c61ef5d5bd753208630b"
+}

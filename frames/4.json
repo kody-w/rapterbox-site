@@ -1,0 +1,22 @@
+{
+  "spec": "rapp/1",
+  "kind": "lesson.published",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 4,
+  "utc": "2026-08-25T16:06:21.179Z",
+  "payload": {
+    "slug": "delivery-not-exit-code",
+    "title": "Exit code zero is not delivery",
+    "question": "osascript returned 0 but the message never arrived",
+    "symptom": "A send command succeeds and the recipient receives nothing.",
+    "cause": "The sending tool reports that it raised no error, which is a different claim from the message being delivered. The tool that queues is not the system that delivers.",
+    "measured": "osascript exited 0 against an unroutable handle with nothing delivered.",
+    "fix": "Verify against the store that records delivery \u2014 poll the messages database for the row \u2014 rather than trusting the caller's exit status.",
+    "why_it_matters": "Every notification path built on exit codes is silently unreliable, and it fails exactly when you most need to hear from it."
+  },
+  "payload_hash": "c2f02e0f59a9aae817911a37165415b94b08316d74bd9f7fbc8df4e730bd133e",
+  "prev": "aea4432a74d457646506b8c7c1ffd43774380138176cecb8b0ddcedd929fb884",
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "d742aa126b0dd1172ad633c3ee6d96804507179d88931884f1b275bb2a21fe41"
+}

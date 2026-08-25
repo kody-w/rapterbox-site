@@ -1,0 +1,22 @@
+{
+  "spec": "rapp/1",
+  "kind": "lesson.published",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 0,
+  "utc": "2026-08-25T16:06:21.153Z",
+  "payload": {
+    "slug": "silent-failures",
+    "title": "Why your scheduled job fails silently on macOS",
+    "question": "why does my launchd job hang with no error and no output",
+    "symptom": "A background job that should text or push finishes with no error, sends nothing, and its own health check still reports green.",
+    "cause": "Under launchd, osascript driving Messages blocks on a TCC Automation prompt that a background context cannot display. Nothing resolves it, so it hangs until timeout.",
+    "measured": "90 second timeout, no error returned, no message sent.",
+    "fix": "Run anything that pushes or sends as a launchd agent in a user session with Automation granted, and split sending into a queue step that never blocks and a drain step that only runs where permission exists.",
+    "why_it_matters": "The failure is not the hang. Silence looks identical to nothing happened, so a watchdog wired to text you goes quiet overnight while reporting itself healthy."
+  },
+  "payload_hash": "89177ce0507572fa777acd368a63234b3dc683aa33470d3a8d6ac6811c7ae45f",
+  "prev": null,
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "b748fe899d70195cea2ac146c5073052ba6283ea11784748235a2de508a8230d"
+}

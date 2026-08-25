@@ -1,0 +1,22 @@
+{
+  "spec": "rapp/1",
+  "kind": "lesson.published",
+  "stream_id": "pub:@rapterbox/lessons",
+  "seq": 1,
+  "utc": "2026-08-25T16:06:21.161Z",
+  "payload": {
+    "slug": "partial-failure",
+    "title": "When an API call half succeeds and you read it as failed",
+    "question": "api call returned an error but some writes went through",
+    "symptom": "A command performs several writes, one is rejected, and the error message makes it look as though nothing happened.",
+    "cause": "Multi-write operations are rarely atomic. A DNS change that sets an A record and a CNAME can have the A record rejected as invalid while the CNAME write succeeds.",
+    "measured": "HTTP 422 on one record, HTTP 200 on the other. Reading 'failed' and moving on left the domain half-changed and took it down.",
+    "fix": "After any command that reports partial failure, read the resulting state back rather than trusting the error. Verify what IS, never what you think you did.",
+    "why_it_matters": "Half-succeeded operations leave systems in states no one designed, and the error message is actively misleading about it."
+  },
+  "payload_hash": "816ad4a24f013cdbe0b5e02771866d63f3d7ee344e37db7f0b165267952dca3d",
+  "prev": "89177ce0507572fa777acd368a63234b3dc683aa33470d3a8d6ac6811c7ae45f",
+  "prev_wave": null,
+  "sig": null,
+  "frame_hash": "5fea326b67c0e2bf70b8dbef038c842a3067537710abb179cd39c10635f700c1"
+}
