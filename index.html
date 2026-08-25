@@ -2,78 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RapterBox — work gets done without you thinking about it</title>
-<!-- LAUNCH SWITCH: delete the next line on launch day so the page can be indexed. -->
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="A small box on your network runs your business admin in the background and texts you the two decisions only you can make.">
-<meta property="og:title" content="RapterBox">
-<meta property="og:description" content="Work gets done without you thinking about it.">
-<style>
-:root{--bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;--go:#5b8cff}
-@media (prefers-color-scheme:light){:root{--bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;--go:#0b5bd3}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-display:flex;align-items:center;justify-content:center;min-height:100vh;padding:32px 20px}
-.w{max-width:520px;width:100%}
-h1{font-size:clamp(30px,6vw,42px);line-height:1.1;letter-spacing:-1.1px;margin:0 0 14px}
-.sub{color:var(--dim);font-size:18px;margin:0 0 12px}
-ul{list-style:none;padding:0;margin:0 0 26px;color:var(--dim);font-size:16px}
-li{padding:5px 0 5px 22px;position:relative}
-li:before{content:"→";position:absolute;left:0;color:var(--go)}
-form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
-label{display:block;font-size:13px;color:var(--dim);margin:10px 0 5px}
-input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:11px 12px;font:15px inherit}
-textarea{min-height:62px;resize:vertical}
-button{margin-top:14px;width:100%;background:var(--go);color:#fff;border:0;border-radius:9px;padding:13px;font:600 16px inherit;cursor:pointer}
-button:disabled{opacity:.55;cursor:wait}
-.fine{color:var(--dim);font-size:12.5px;margin-top:10px;text-align:center}
-.msg{display:none;border-radius:12px;padding:18px;margin-top:14px;font-weight:600;text-align:center}
-#ok{border:1px solid #3fb950;color:#3fb950}
-#no{border:1px solid #e0a94a;color:#e0a94a}
-.foot{margin-top:22px;color:var(--dim);font-size:12.5px;text-align:center}
-a{color:var(--go)}
-</style>
+<title>RapterBox</title>
+<!-- INTERIM: rapterbox.com points at the live GoDaddy builder page, which has the
+     working signup form wired into GoDaddy Conversations. One form, not two. Replace
+     this with a self-hosted page only once its form posts somewhere real. -->
+<link rel="canonical" href="https://rapterbox.godaddysites.com/">
+<meta http-equiv="refresh" content="0; url=https://rapterbox.godaddysites.com/">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#0b0d11;color:#94a0b1;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+a{color:#5b8cff}</style>
 </head>
 <body>
-<div class="w">
-  <h1>Work gets done without you thinking about it.</h1>
-  <p class="sub">You are already begging your tools to remember what you said. A RapterBox is a
-  small box on your network that runs the admin in the background — and texts you only the
-  decisions that are actually yours.</p>
-  <ul>
-    <li>The paper trail builds itself while you talk</li>
-    <li>One message each morning, not a dashboard</li>
-    <li>Runs on your network. You own the box and the records</li>
-  </ul>
-
-  <form id="f" method="POST" action="__SIGNUP_ENDPOINT__">
-    <label for="n">Name</label><input id="n" name="name" autocomplete="name" required>
-    <label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" required>
-    <label for="u">What would you want it handling? (optional)</label>
-    <textarea id="u" name="note"></textarea>
-    <input type="hidden" name="source" value="rapterbox.com">
-    <button id="b" type="submit">Get early access</button>
-    <div class="fine">No newsletter. We write when there is something to say.</div>
-  </form>
-  <div class="msg" id="ok">You're on the list — we'll be in touch.</div>
-  <div class="msg" id="no">Not accepting signups from this page yet. Try again shortly.</div>
-
-  <div class="foot">RapterBox LLC · built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation</div>
-</div>
-<script>
-const f=document.getElementById('f'),b=document.getElementById('b'),ok=document.getElementById('ok'),no=document.getElementById('no');
-f.addEventListener('submit',async ev=>{
-  ev.preventDefault();
-  const action=f.getAttribute('action')||'';
-  if(!action||action.indexOf('__')===0){no.style.display='block';return;}
-  b.disabled=true;b.textContent='sending...';
-  try{
-    const r=await fetch(action,{method:'POST',body:new FormData(f),headers:{Accept:'application/json'}});
-    if(!r.ok)throw 0;
-    f.style.display='none';no.style.display='none';ok.style.display='block';
-  }catch(e){b.disabled=false;b.textContent='Get early access';no.style.display='block';}
-});
-</script>
+<p>Taking you to RapterBox… <a href="https://rapterbox.godaddysites.com/">continue</a></p>
+<script>location.replace("https://rapterbox.godaddysites.com/");</script>
 </body>
 </html>
