@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.wildhaven.waitlist-texter</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/kodywildfeuer/Documents/GitHub/rapterbox-site/waitlist/texter.py</string>
+  </array>
+  <key>StartInterval</key><integer>300</integer>
+  <key>StandardOutPath</key><string>/tmp/waitlist-texter.out</string>
+  <key>StandardErrorPath</key><string>/tmp/waitlist-texter.err</string>
+</dict></plist>

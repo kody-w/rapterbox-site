@@ -151,6 +151,7 @@ footer{padding:34px 0 76px;color:var(--dim);font-size:13.5px;border-top:1px soli
   .reveal.in{opacity:1;transform:none}
 }
 @keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.opt{font-weight:400;opacity:.7;font-size:.85em}
 </style>
 </head>
 <body>
@@ -250,12 +251,41 @@ footer{padding:34px 0 76px;color:var(--dim);font-size:13.5px;border-top:1px soli
     <form id="f" method="POST" action="https://formspree.io/f/mgawgado">
       <label for="n">Name</label><input id="n" name="name" autocomplete="name" maxlength="100" required>
       <label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" required>
+      <label for="p">Phone <span class="opt">(optional — a real text from Kody's number when your spot opens)</span></label><input id="p" name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="+1 404 555 0123">
       <label for="u">What would you want it handling?</label>
       <textarea id="u" name="note" maxlength="2000" placeholder="the machines, agents, automations or admin you keep having to chase"></textarea>
       <input type="hidden" name="source" value="rapterbox.com">
       <button id="b" type="submit">Join the waitlist</button>
+      <p id="f-msg" role="status" aria-live="polite"></p>
       <p class="fine" style="text-align:center;margin:12px 0 0">No newsletter. We write when there is something to say.</p>
     </form>
+    <script src="waitlist-config.js"></script>
+    <script>
+    // Waitlist confirmations: when WAITLIST_ENDPOINT is set (the Apps Script web app that runs
+    // as wildhavenhomesllc@gmail.com), the signup posts there and a real email — and a real text,
+    // if a phone was given — comes back. Empty endpoint = the form submits to Formspree as before.
+    (function () {
+      var WAITLIST_ENDPOINT = window.WAITLIST_ENDPOINT || '';
+      var f = document.getElementById('f'), b = document.getElementById('b'), msg = document.getElementById('f-msg');
+      if (!f || !WAITLIST_ENDPOINT) return;
+      f.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var data = { name: f.name.value, email: f.email.value, phone: (f.phone && f.phone.value) || '', note: (f.note && f.note.value) || '', source: 'rapterbox.com' };
+        b.disabled = true; msg.textContent = 'Sending…';
+        fetch(WAITLIST_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j.ok) throw new Error(j.error || 'refused');
+            msg.textContent = j.welcomed === false
+              ? 'You were already on the list — nothing to do.'
+              : ('Done. Check ' + data.email + ' — a real email is on its way' + (data.phone ? ', and a text will follow from Kody\'s number.' : '.'));
+            f.reset();
+          })
+          .catch(function () { msg.textContent = 'That didn\'t go through — sending the old way…'; f.removeEventListener('submit', arguments.callee); HTMLFormElement.prototype.submit.call(f); })
+          .finally(function () { b.disabled = false; });
+      });
+    })();
+    </script>
     <div class="msg" id="ok">You're on the waitlist. You'll hear from us before the first boxes ship.</div>
     <div class="msg" id="no">That didn't send. Try again in a moment.</div>
   </div>
