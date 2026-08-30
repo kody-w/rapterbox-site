@@ -1,7 +1,8 @@
 # rapterbox.com
 
-> The RapterBox LLC product portfolio: Genesis 251 Holo species for people and
-> a local-first business twin for operators.
+> The RapterBox LLC product portfolio: 251 issuer-held, untransferred,
+> undiscovered First Edition Holo Originals for people and a local-first
+> business twin for operators.
 
 - First Edition / First Dimension: https://rappter.com/
 - Holodex: https://kody-w.github.io/holodex/
