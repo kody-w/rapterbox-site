@@ -5,6 +5,25 @@ checking explicitly supplied public artifacts after public IP removal. It does
 not discover private sources, authenticate, mutate remote systems, or require
 secrets.
 
+## RAPP protocol boundary
+
+This tool emits only its documented audit JSON and Markdown reports. Those
+reports are not RAPP artifacts or work-loop records, and the tool does not claim
+RAPP/1 protocol conformance.
+
+RAPP remains the external public open-source foundation, and RAPP/1 remains the
+protocol authority. Nothing in this audit assigns RAPP ownership to an LLC,
+defines an alternate frame, wire format, or identity envelope, or transfers
+protocol authority. The audit also creates no offspring/cross outputs,
+identities, or lineage.
+
+If a separate integration wraps an audit result in a RAPP work-loop record, that
+integration must use the canonical exact 11-key `rapp/1` frame. Any
+`data_slush` must remain only inside `payload` and be bounded and
+non-sensitive. Offspring/cross outputs must receive fresh identities and typed
+parent lineage; they must never inherit authority. That integration behavior is
+outside this tool's scope.
+
 ## Classifications
 
 Each input artifact receives exactly one classification:

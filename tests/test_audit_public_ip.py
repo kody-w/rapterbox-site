@@ -239,6 +239,27 @@ class PublicIpAuditTests(unittest.TestCase):
         self.assertEqual("probe-error", report["artifacts"][0]["classification"])
         self.assertEqual("fixture-miss", report["artifacts"][0]["detail"])
 
+    def test_audit_report_is_not_a_rapp_protocol_frame(self) -> None:
+        report = audit.build_report(
+            [
+                audit.Artifact(
+                    kind="url",
+                    source="https://example.com/",
+                    classification="unreachable",
+                    status=404,
+                )
+            ],
+            generated_at=None,
+        )
+
+        self.assertEqual(
+            {"schema_version", "summary", "artifacts"},
+            set(report),
+        )
+        serialized = json.dumps(report)
+        self.assertNotIn('"rapp/1"', serialized)
+        self.assertNotIn('"data_slush"', serialized)
+
 
 if __name__ == "__main__":
     unittest.main()
