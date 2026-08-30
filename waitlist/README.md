@@ -1,7 +1,8 @@
 # The waitlist that writes back
 
-Sign up on rapterbox.com and something real happens: an email from wildhavenhomesllc@gmail.com
-lands in your inbox, and if you gave a phone number, a text arrives from Kody's own number.
+Sign up on rapterbox.com and something real happens: a confirmation email
+lands in your inbox, and if you gave a phone number, a text arrives from the
+owner's Messages account.
 That is the RapterBox story told by the product itself — the same automation that runs
 Wildhaven Homes (real-estate follow-ups, the chasing, the remembering) is what welcomed you.
 
@@ -10,7 +11,7 @@ Google account; the only thing here is the code.
 
 ## Turn it on (six clicks, once)
 
-1. Signed in as **wildhavenhomesllc@gmail.com**, open https://script.google.com → **New project**.
+1. Signed in to the authorized business Google account, open https://script.google.com → **New project**.
 2. Replace the editor contents with `waitlist/Code.gs` from this repo. Rename the project "RapterBox waitlist".
 3. Project Settings (gear) → **Script properties** → add `WAITLIST_TOKEN` = any long random string
    (this is the texter's key; it never enters a repo).
