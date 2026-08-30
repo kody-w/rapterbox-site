@@ -20,7 +20,15 @@ Google account; the only thing here is the code.
    From that moment every signup gets the real email.
 6. Texts: on the Mac that stays on, create `~/.wildhaven-waitlist.json`:
    `{"endpoint": "<that /exec URL>", "token": "<WAITLIST_TOKEN>"}`, then
-   `cp waitlist/com.wildhaven.waitlist-texter.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist`.
+   render the launchd template with the absolute path of your checkout:
+
+   ```bash
+   sed "s#__RAPTERBOX_SITE_ROOT__#$(pwd)#g" \
+     waitlist/com.wildhaven.waitlist-texter.plist \
+     > ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist
+   launchctl load ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist
+   ```
+
    Every 5 minutes `texter.py` sends the welcome text through Messages.app to anyone who gave a
    phone number and hasn't been texted, then marks them. `python3 waitlist/texter.py --dry-run`
    shows who would be texted without sending.
