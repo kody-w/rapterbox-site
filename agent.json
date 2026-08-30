@@ -10,13 +10,8 @@
   "human_view": "https://rapterbox.com/",
   "agent_view": "https://rapterbox.com/agent.json",
   "foundation": {
-    "human_view": "https://rapterbox.com/rapp",
-    "philosophy": "https://rapterbox.com/RAPP-PHILOSOPHY.md",
-    "constitution": "https://rapterbox.com/RAPP-CONSTITUTION.md",
-    "ten_commandments": "https://rapterbox.com/TEN-COMMANDMENTS.md",
-    "ip_notice": "https://rapterbox.com/RAPP-IP-NOTICE.md",
-    "provenance": "https://rapterbox.com/rapp-foundation.json",
-    "market_policy": "https://rapterbox.com/MARKETPLACE-POLICY.md",
+    "public_boundary": "https://rapterbox.com/rapp",
+    "rapp_foundation": "https://github.com/kody-w/RAPP",
     "protocol_authority": "https://github.com/kody-w/rapp-1"
   },
   "products": [

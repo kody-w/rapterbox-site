@@ -3,160 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CODE RED — The RAPP Constitution</title>
-<meta name="description" content="RapterBox LLC's foundational RAPP philosophy, constitution, and ten commandments.">
-<meta property="og:title" content="The RAPP Constitution">
-<meta property="og:description" content="What should I do? RAPP the problem layer by layer and frame by frame, then graduate the organism into the wild.">
-<meta property="og:type" content="article">
-<meta property="og:url" content="https://rapterbox.com/rapp">
+<title>RAPP foundation and RappterBox products</title>
+<meta name="description" content="A short boundary statement: RAPP is the open-source foundation; Rappter and RapterBox are RapterBox LLC brands and products.">
 <link rel="canonical" href="https://rapterbox.com/rapp">
-<link rel="alternate" type="application/json" href="https://rapterbox.com/rapp-foundation.json" title="Foundation provenance">
 <style>
-:root{
-  --red:#b00020;--deep:#260008;--ink:#171214;--muted:#645a5d;
-  --paper:#fffaf5;--line:#d8c9c9;--wash:#f8e9e9;
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:#1a1718;color:var(--ink);font:17px/1.58 Georgia,"Times New Roman",serif}
-a{color:var(--red)}
-.toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:1rem;padding:.8rem 1.2rem;background:rgba(26,23,24,.96);color:#fff;font:700 13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
-.toolbar a{color:#fff}
-.book{width:min(8.5in,calc(100% - 2rem));margin:2rem auto 5rem}
-.page{position:relative;min-height:11in;padding:.72in .7in;background:var(--paper);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}
-.page+.page{margin-top:1.5rem}
-.page:before{content:"";position:absolute;inset:.18in;border:2px solid var(--red);pointer-events:none}
-.page:after{content:"RAPTERBOX LLC  /  FOUNDATIONAL IP  /  2026";position:absolute;left:.7in;right:.7in;bottom:.34in;padding-top:.12in;border-top:1px solid var(--line);color:var(--muted);font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-align:center}
-.classification{display:inline-block;padding:.16rem .45rem;background:var(--red);color:#fff;font:800 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em}
-.kicker{margin:1.5rem 0 .5rem;color:var(--red);font:700 13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase}
-h1,h2,h3{margin-top:0;line-height:1.02}
-h1{max-width:7.5em;margin:.5in 0 .25in;font-size:56px;letter-spacing:-.045em}
-h2{margin-bottom:.22in;color:var(--deep);font-size:34px;letter-spacing:-.025em}
-h3{margin:.22in 0 .08in;color:var(--red);font-size:18px}
-p{margin:.11in 0}
-.lede{max-width:36rem;color:var(--muted);font-size:22px;line-height:1.45}
-.thesis{margin:.42in 0;padding:.26in .3in;border-left:7px solid var(--red);background:var(--wash);font-size:25px;line-height:1.35}
-.formula{margin:.3in 0;padding:.2in;border:1px solid var(--line);background:#fff;font:700 15px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
-.steps,.articles,.commands{display:grid;gap:.13in}
-.steps{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.25in}
-.step,.article,.command{padding:.15in .17in;border:1px solid var(--line);background:rgba(255,255,255,.64)}
-.step strong,.article strong,.command strong{color:var(--deep)}
-.num{display:inline-grid;width:1.65rem;height:1.65rem;margin-right:.35rem;place-items:center;border-radius:50%;background:var(--red);color:#fff;font:800 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
-.articles{grid-template-columns:repeat(2,minmax(0,1fr))}
-.article{font-size:14px;line-height:1.43}
-.article h3{margin-top:0}
-.commands{grid-template-columns:1fr}
-.command{display:grid;grid-template-columns:2.1rem 1fr;align-items:start;font-size:15px}
-.command .num{margin-top:.05rem}
-.signature{display:grid;grid-template-columns:1fr 1fr;gap:.5in;margin-top:.8in}
-.signature div{padding-top:.18in;border-top:1px solid var(--ink);font-size:12px}
-.small{color:var(--muted);font-size:12px}
-.red{color:var(--red)}
-@media(max-width:760px){
-  .book{width:100%;margin:0}.page{min-height:0;padding:4rem 2rem}.page:before,.page:after{display:none}
-  .page+.page{margin-top:1px}.steps,.articles{grid-template-columns:1fr}.toolbar{position:static}
-}
-@media print{
-  @page{size:letter;margin:0}
-  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .toolbar{display:none}.book{width:auto;margin:0}.page{width:8.5in;height:10.98in;min-height:10.98in;margin:0;box-shadow:none;break-after:page;page-break-after:always}
-  .page:last-child{break-after:auto;page-break-after:auto}
-}
+:root{color-scheme:light dark;--bg:#111;--card:#1b1b1b;--ink:#f5f1ed;--muted:#b8b0aa;--line:#38322f;--accent:#fd8ea1}
+@media(prefers-color-scheme:light){:root{--bg:#f7f4ef;--card:#fff;--ink:#242424;--muted:#625d59;--line:#ded7d1;--accent:#b11f4b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:4rem 1.25rem}
+main{max-width:48rem;margin:auto;padding:clamp(2rem,6vw,4rem);border:1px solid var(--line);border-radius:1rem;background:var(--card)}
+.eyebrow{color:var(--accent);font:800 .76rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em}
+h1{margin:.7rem 0 1.2rem;font-size:clamp(2.7rem,8vw,5.5rem);line-height:.95;letter-spacing:-.06em}
+p{margin:1rem 0}.muted{color:var(--muted)}a{color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:2rem}.card{padding:1.1rem;border:1px solid var(--line);border-radius:.75rem}.card strong{display:block;margin-bottom:.3rem}
+@media(max-width:650px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="toolbar"><span>CODE RED / FOUNDATIONAL IP</span><span><a href="/rapp-code-red.pdf">Print edition</a> · <a href="/rapp-foundation.json">Provenance</a> · <a href="/">RapterBox LLC</a> · <a href="https://github.com/kody-w/rapp-1">RAPP/1</a></span></div>
-<main class="book">
-  <section class="page">
-    <span class="classification">CODE RED</span>
-    <p class="kicker">RapterBox LLC · Foundational doctrine</p>
-    <h1>The RAPP Constitution</h1>
-    <p class="lede">Why RAPP exists, why it is called RAPP, how a problem becomes an organism, and how that organism graduates into the wild without changing the sacred kernel underneath it.</p>
-    <blockquote class="thesis">What should I do?<br><br>RAPP up the problem layer by layer and frame by frame until it solves the goal. Then graduate the organism into the wild to fulfill it.</blockquote>
-    <div class="formula">SACRED KERNEL → WRAPPED CAPABILITY → FRAMED EVIDENCE → GRADUATED ORGANISM → NEW ENCOUNTER → OFFSPRING</div>
-    <p class="small">Version 1.0 draft · 2026-08-30 · Public authorship and provenance record</p>
-  </section>
-
-  <section class="page">
-    <span class="classification">WHY RAPP</span>
-    <h2>The organism grows around the Grail.</h2>
-    <p>The Grail is the seed. RAPP is the living structure wrapped around it: protocol, identity, agents, organs, tools, policy, memory, state, interfaces, deployment, and experience.</p>
-    <p>The kernel is not a feature backlog. New capability grows outward as a removable, testable layer. This keeps the organism free to become specific without silently becoming a different species.</p>
-    <h3>The name</h3>
-    <p><strong>R</strong> is recursive: the same organism grammar repeats from an agent to a rapplication, brainstem, neighborhood, and estate. <strong>APP</strong> is application: runnable, useful life. Spoken aloud, RAPP carries <strong>wrap</strong>: capability wraps the Grail instead of cutting into it.</p>
-    <p>RAPP is also a verb. To RAPP a problem is to wrap it in verifiable layers and frames until the resulting organism can be safely graduated.</p>
-    <div class="steps">
-      <div class="step"><span class="num">1</span><strong>Name the goal.</strong><br>State the owner, boundary, evidence, and forbidden actions.</div>
-      <div class="step"><span class="num">2</span><strong>Add one layer.</strong><br>Agent, organ, adapter, policy, state, interface, or deployment control.</div>
-      <div class="step"><span class="num">3</span><strong>Frame the result.</strong><br>Keep what happened inspectable and content-addressed.</div>
-      <div class="step"><span class="num">4</span><strong>Try again.</strong><br>Add, replace, or remove the next layer under bounded policy.</div>
-      <div class="step"><span class="num">5</span><strong>Graduate.</strong><br>When it reliably fulfills the goal, release it through evidence-bearing gates.</div>
-      <div class="step"><span class="num">6</span><strong>Grow in the wild.</strong><br>New encounters create new frames, candidates, and distinctly identified offspring.</div>
-    </div>
-  </section>
-
-  <section class="page">
-    <span class="classification">CONSTITUTION I–VI</span>
-    <h2>The law of the organism.</h2>
-    <div class="articles">
-      <article class="article"><h3>I · The Question Comes First</h3><p>Every organism begins with “What should I do?” The goal and its boundaries are named before capability is added.</p></article>
-      <article class="article"><h3>II · The Grail Is Sacred</h3><p>The authenticated Grail remains byte-identical under its identity. Changed bytes are a different seed with explicit lineage.</p></article>
-      <article class="article"><h3>III · Growth Moves Outward</h3><p>New behavior belongs in agents, organs, adapters, policy, frames, configuration, state, controls, or skins.</p></article>
-      <article class="article"><h3>IV · Growth Is Framed</h3><p>Every material step leaves evidence. History is not rewritten to make the present look inevitable.</p></article>
-      <article class="article"><h3>V · Identity Survives Change</h3><p>An organism keeps one verifiable lineage across devices, releases, and environments. Names and locations do not silently rebind it.</p></article>
-      <article class="article"><h3>VI · Ownership Is Local by Default</h3><p>The owner controls memory, credentials, policy, and private records. Portable capability may travel; private lived history does not travel by accident.</p></article>
-    </div>
-    <blockquote class="thesis">One open seed. Infinitely many owned organisms. No hidden mutation of the root.</blockquote>
-  </section>
-
-  <section class="page">
-    <span class="classification">CONSTITUTION VII–XII</span>
-    <h2>The law of graduation and life in the wild.</h2>
-    <div class="articles">
-      <article class="article"><h3>VII · Power Is Bounded</h3><p>Autonomy expands through policy and evidence. Missing permission or degraded capability is never presented as success.</p></article>
-      <article class="article"><h3>VIII · Graduation Is Earned</h3><p>The exact candidate passes RAPP CI/CD, production-shaped Preprod, restore proof, and bounded RAPP Deploy exposure.</p></article>
-      <article class="article"><h3>IX · Users Are Not the Test Environment</h3><p>Serving behavior does not mutate in place. State survives promotion and rollback. Exposure grows by measured cells and cohorts.</p></article>
-      <article class="article"><h3>X · The Seed Grows in New Ground</h3><p>The same Grail can be planted on a new machine, tenant, region, or substrate. Environment is an outer layer.</p></article>
-      <article class="article"><h3>XI · Red Is Truth</h3><p>A red gate is protection, not obstruction. Repair the cause or prove the oracle wrong; never mute the finding.</p></article>
-      <article class="article"><h3>XII · Innovation Must Remain Possible</h3><p>The invariant core stays small. Checks, component kinds, objectives, controls, agents, and organs remain extensible.</p></article>
-    </div>
-    <h3>Offspring and crossing</h3>
-    <p>A self-documented organism may create a differently identified offspring after a new encounter. Two or more organisms may be crossed into a new descendant when their documented capabilities can solve a challenge none could meet alone. Parents remain immutable; identity, authority, ownership, and history never collapse.</p>
-    <p class="small">The lineage may continue without a final generation. Every concrete attempt remains bounded by policy, evidence, time, and resources.</p>
-  </section>
-
-  <section class="page">
-    <span class="classification">THE TEN COMMANDMENTS</span>
-    <h2>Keep these when everything else changes.</h2>
-    <div class="commands">
-      <div class="command"><span class="num">1</span><div><strong>Ask what you should do.</strong> Name the goal, owner, boundary, and forbidden actions.</div></div>
-      <div class="command"><span class="num">2</span><div><strong>Keep the Grail sacred.</strong> Never change authenticated kernel bytes under the same identity.</div></div>
-      <div class="command"><span class="num">3</span><div><strong>Grow outward.</strong> Wrap the seed; do not weld every need into the root.</div></div>
-      <div class="command"><span class="num">4</span><div><strong>Frame every meaningful step.</strong> Preserve evidence of growth, failure, learning, and decision.</div></div>
-      <div class="command"><span class="num">5</span><div><strong>Keep one identity and one lineage.</strong> Never silently rebind an organism or its history.</div></div>
-      <div class="command"><span class="num">6</span><div><strong>Prove before you trust.</strong> Exact bytes, fresh evidence, and authorized decisions precede promotion.</div></div>
-      <div class="command"><span class="num">7</span><div><strong>Never mutate the serving AI under its users.</strong> Grow a candidate in isolation and graduate it deliberately.</div></div>
-      <div class="command"><span class="num">8</span><div><strong>Protect the owner's state and private life.</strong> Preserve acknowledged work and declared data boundaries.</div></div>
-      <div class="command"><span class="num">9</span><div><strong>Fail red and return exactly.</strong> Contain the blast radius and roll back only to a verified release.</div></div>
-      <div class="command"><span class="num">10</span><div><strong>Graduate, encounter, and grow again.</strong> Fulfill the RAPPed-up goal; create attributable offspring or crosses when the wild demands more.</div></div>
-    </div>
-  </section>
-
-  <section class="page">
-    <span class="classification">FOUNDATIONAL IP RECORD</span>
-    <h2>Authorship, openness, and ownership.</h2>
-    <p>This edition records RapterBox LLC's public company expression of the RAPP philosophy, Constitution, Ten Commandments, and visual presentation.</p>
-    <p>The RAPP/1 protocol specification, schemas, reference implementation, and conformance tools remain governed by the license in the canonical RAPP/1 repository. This record does not narrow that open-source grant.</p>
-    <p>RapterBox LLC reserves rights in its original company-authored expression, product and company names, marks, visual publication, and commercial presentation, except where an explicit repository license states otherwise.</p>
-    <div class="formula">OPEN PROTOCOL ≠ UNOWNED ORGANISM<br>PORTABLE CAPABILITY ≠ PORTABLE PRIVATE LIFE<br>LINEAGE ≠ INHERITED AUTHORITY</div>
-    <p><strong>Canonical protocol:</strong><br><a href="https://github.com/kody-w/rapp-1">github.com/kody-w/rapp-1</a></p>
-    <p><strong>Company publication:</strong><br><a href="https://rapterbox.com/rapp">rapterbox.com/rapp</a></p>
-    <p class="small">This publication is a technical provenance and notice record. It is not a substitute for jurisdiction-specific legal advice, registration, assignment instruments, or signed company resolutions.</p>
-    <div class="signature">
-      <div>Estate owner / authorized signer</div>
-      <div>Date</div>
-    </div>
-  </section>
+<main>
+  <p class="eyebrow">FOUNDATION / BRAND / PRODUCT</p>
+  <h1>Keep the layers clear.</h1>
+  <p><strong>RAPP</strong> is the public open-source foundation. Its product and implementation home is <a href="https://github.com/kody-w/RAPP">kody-w/RAPP</a>; its interoperable protocol is <a href="https://github.com/kody-w/rapp-1">RAPP/1</a>.</p>
+  <p><strong>Rappter</strong> is the singular customer-facing brand and <a href="https://rappter.com/">rappter.com</a> is a brand asset of RapterBox LLC.</p>
+  <p><strong>RapterBox LLC</strong> is the company. RapterBox is also a separate sub-product. RAPP foundation material and LLC product IP are not the same thing.</p>
+  <div class="grid">
+    <div class="card"><strong>Open foundation</strong><span class="muted">RAPP and RAPP/1 remain public foundation and protocol work.</span></div>
+    <div class="card"><strong>LLC products</strong><span class="muted">Rappter, RapterBox, and other ventures keep their own product identity and private operating material.</span></div>
+  </div>
+  <p class="muted">Detailed internal company doctrine, ownership administration, and private operating records are not published on this website.</p>
 </main>
 </body>
 </html>
