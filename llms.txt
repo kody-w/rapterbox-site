@@ -5,19 +5,16 @@
 > business twin for operators.
 
 - First Edition / First Dimension: https://rappter.com/
-- First Hatch and official market policy: https://rapterbox.com/MARKETPLACE-POLICY.md
+- First Hatch and official market: https://rappter.com/market
 - Holodex: https://kody-w.github.io/holodex/
 - Business twin and waitlist: https://rapterbox.com/#business
 - AI assurance: https://rapterbox.com/wrong-game then https://rapterbox.com/invite
 - DOGG: https://rapterbox.com/dogg
-- RAPP philosophy, Constitution, and Ten Commandments: https://rapterbox.com/rapp
-- RAPP foundation provenance: https://rapterbox.com/rapp-foundation.json
+- Foundation/product boundary: https://rapterbox.com/rapp
+- Open-source RAPP foundation: https://github.com/kody-w/RAPP
+- RAPP/1 protocol: https://github.com/kody-w/rapp-1
 - Public agent contract: https://rapterbox.com/agent.json
 
-The Holo product and business-box product are separate offers built on the same
-RAPP/1 ownership, verification, privacy, and bounded-autonomy model.
-
-RAPP means growing a recursive application organism around an unchanged Grail:
-ask what it should do, wrap the problem layer by layer and frame by frame,
-graduate it when proven, then let new encounters produce attributable offspring
-or crosses without collapsing parent identity or authority.
+The Holo product and business-box product are separate LLC offers built on the
+public RAPP foundation. Detailed internal company doctrine and ownership
+administration are private and are not served from this website.
