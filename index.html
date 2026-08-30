@@ -110,6 +110,7 @@ label{display:grid;gap:.4rem;margin-top:1rem;font-weight:700;font-size:.86rem}
 input,textarea{width:100%;min-height:2.9rem;padding:.75rem .85rem;border:1px solid var(--cp-border);border-radius:.625rem;color:var(--cp-text);background:var(--cp-bg);font:inherit}textarea{min-height:6rem}
 button{width:100%;margin-top:1rem}.message{display:none;margin-top:1rem;color:var(--cp-success);font-weight:700}
 .fine{color:var(--cp-text-muted);font-size:.8rem}
+.opt{font-weight:400;color:var(--cp-text-muted)}
 footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4rem;border-top:1px solid var(--cp-border);color:var(--cp-text-muted);font-size:.8rem}
 @media(max-width:780px){.shell{width:calc(100% - 2rem)}nav{display:none}.products,.business-grid,.proof{grid-template-columns:1fr}.product{min-height:0}.actions{width:100%}.actions .button{flex:1 1 10rem}footer{flex-direction:column}}
 </style>
@@ -187,6 +188,7 @@ QUIETED
     <form id="waitlist" method="POST" action="https://formspree.io/f/mgawgado">
       <label for="name">Name<input id="name" name="name" autocomplete="name" required></label>
       <label for="email">Email<input id="email" name="email" type="email" autocomplete="email" required></label>
+      <label for="phone">Phone <span class="opt">(optional — receive a real text when your spot opens)</span><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="+1 404 555 0123"></label>
       <label for="note">What should the box handle?<textarea id="note" name="note"></textarea></label>
       <input type="hidden" name="source" value="rapterbox.com-business">
       <button class="button" type="submit">Join the business waitlist</button>
@@ -199,9 +201,30 @@ QUIETED
   <span>RapterBox LLC · RAPP/1-native products</span>
   <span><a href="https://rappter.com/">Rappter</a> · <a href="https://kody-w.github.io/holodex/">Holodex</a> · <a href="/ai">For AI agents</a></span>
 </footer>
+<script src="waitlist-config.js"></script>
 <script>
 const form=document.getElementById("waitlist"),message=document.getElementById("message");
-form.addEventListener("submit",async event=>{event.preventDefault();const button=form.querySelector("button");button.disabled=true;try{const response=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{Accept:"application/json"}});if(!response.ok)throw new Error();form.hidden=true;message.style.display="block"}catch(error){button.disabled=false;button.textContent="Try again"}});
+form.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const button=form.querySelector("button");
+  button.disabled=true;
+  try{
+    const endpoint=window.WAITLIST_ENDPOINT||"";
+    let response;
+    if(endpoint){
+      const data={name:form.name.value,email:form.email.value,phone:form.phone.value||"",note:form.note.value||"",source:"rapterbox.com-business"};
+      response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)});
+    }else{
+      response=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{Accept:"application/json"}});
+    }
+    if(!response.ok)throw new Error();
+    form.hidden=true;
+    message.style.display="block";
+  }catch(error){
+    button.disabled=false;
+    button.textContent="Try again";
+  }
+});
 </script>
 </body>
 </html>
