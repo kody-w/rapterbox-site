@@ -1,7 +1,8 @@
 # The waitlist that writes back
 
-Sign up on rapterbox.com and something real happens: an email from wildhavenhomesllc@gmail.com
-lands in your inbox, and if you gave a phone number, a text arrives from Kody's own number.
+Sign up on rapterbox.com and something real happens: a confirmation email
+lands in your inbox, and if you gave a phone number, a text arrives from the
+owner's Messages account.
 That is the RapterBox story told by the product itself — the same automation that runs
 Wildhaven Homes (real-estate follow-ups, the chasing, the remembering) is what welcomed you.
 
@@ -10,7 +11,7 @@ Google account; the only thing here is the code.
 
 ## Turn it on (six clicks, once)
 
-1. Signed in as **wildhavenhomesllc@gmail.com**, open https://script.google.com → **New project**.
+1. Signed in to the authorized business Google account, open https://script.google.com → **New project**.
 2. Replace the editor contents with `waitlist/Code.gs` from this repo. Rename the project "RapterBox waitlist".
 3. Project Settings (gear) → **Script properties** → add `WAITLIST_TOKEN` = any long random string
    (this is the texter's key; it never enters a repo).
@@ -20,7 +21,15 @@ Google account; the only thing here is the code.
    From that moment every signup gets the real email.
 6. Texts: on the Mac that stays on, create `~/.wildhaven-waitlist.json`:
    `{"endpoint": "<that /exec URL>", "token": "<WAITLIST_TOKEN>"}`, then
-   `cp waitlist/com.wildhaven.waitlist-texter.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist`.
+   render the launchd template with the absolute path of your checkout:
+
+   ```bash
+   sed "s#__RAPTERBOX_SITE_ROOT__#$(pwd)#g" \
+     waitlist/com.wildhaven.waitlist-texter.plist \
+     > ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist
+   launchctl load ~/Library/LaunchAgents/com.wildhaven.waitlist-texter.plist
+   ```
+
    Every 5 minutes `texter.py` sends the welcome text through Messages.app to anyone who gave a
    phone number and hasn't been texted, then marks them. `python3 waitlist/texter.py --dry-run`
    shows who would be texted without sending.
