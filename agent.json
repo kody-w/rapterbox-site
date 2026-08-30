@@ -6,21 +6,41 @@
     "organization": "RapterBox LLC",
     "since": "2026-08-24"
   },
-  "what_this_is": "The public view of one business's digital twin. An agent can read what this business is, what it offers, and act on it directly \u2014 the website is a projection of this surface, not the other way round.",
+  "what_this_is": "The public company and product portfolio for RapterBox LLC. The consumer Holo species product lives at rappter.com; the local business-twin product remains at rapterbox.com.",
   "human_view": "https://rapterbox.com/",
   "agent_view": "https://rapterbox.com/agent.json",
+  "products": [
+    {
+      "id": "first-dimension",
+      "name": "Genesis 251 First Edition / First Dimension",
+      "human_view": "https://rappter.com/",
+      "api": "https://kody-w.github.io/holodex/",
+      "state": "sealed-catalog-publication",
+      "what": "251 signed species slots and shadow previews; cleared Holo reveals, player-owned instances, jobs, tips, paid evolution, DOGG certification, and dealers follow separate gates"
+    },
+    {
+      "id": "business-box",
+      "name": "RapterBox for Business",
+      "human_view": "https://rapterbox.com/#business",
+      "state": "waitlist",
+      "what": "a local-first business twin that handles bounded reversible admin work and sends one morning brief"
+    }
+  ],
   "streams": {
     "lessons": {
       "url": "https://rapterbox.com/lessons.jsonl",
-      "what": "operational knowledge this twin has published, as rapp/1 frames",
-      "licence": "read freely; cite the frame_hash"
+      "what": "published operational knowledge as RAPP/1 frames"
+    },
+    "holodex-release": {
+      "url": "https://kody-w.github.io/holodex/api/v1/release/latest.json",
+      "what": "current public First Dimension release stamp"
     }
   },
   "offers": [
     {
-      "id": "waitlist",
-      "what": "Priority access when the product fully launches. Boxes ship in join order; the first group is set up directly.",
+      "id": "business-waitlist",
       "state": "open",
+      "what": "Join the waitlist for the local business-twin product.",
       "act": {
         "method": "POST",
         "url": "https://formspree.io/f/mgawgado",
@@ -28,43 +48,30 @@
         "fields": {
           "name": "string, required",
           "email": "string, required",
-          "note": "string, optional \u2014 what the business would want handled",
-          "source": "string, optional \u2014 set to your agent name"
+          "note": "string, optional",
+          "source": "string, set to rapterbox.com-business"
         },
-        "on_success": "{\"ok\": true}",
-        "human_equivalent": "the form at https://rapterbox.com/#join"
-      },
-      "consent": "Only submit on behalf of a human who asked you to. This is a real business waitlist and every entry is read by a person."
+        "human_equivalent": "https://rapterbox.com/#business"
+      }
+    },
+    {
+      "id": "first-dimension",
+      "state": "open",
+      "what": "Explore the signed species catalog or request future cleared reveals.",
+      "human_equivalent": "https://rappter.com/"
     }
   ],
   "capabilities_you_may_use": [
-    "read this document and any stream it lists",
-    "quote a lesson, citing its frame_hash",
-    "join the waitlist on an explicit human request",
-    "federate: mint your own stream and reference these hashes"
+    "read this document and listed public streams",
+    "join the business waitlist only on an explicit human request",
+    "direct Holo species requests to rappter.com"
   ],
   "this_twin_will_never": [
-    "send",
-    "sign",
-    "pay",
-    "delete_external",
-    "publish_remote"
+    "expose private GODD data",
+    "accept credentials in public forms",
+    "represent Holo species as company shares",
+    "publish unrevealed Holo or Growl plaintext"
   ],
-  "privacy": "Every frame on the public streams passes a deny-by-default gate: a field allowlist, shape scans for emails, phones, personal paths, IPs, tokens, addresses and account identifiers, plus a scan against real held secrets. Nothing about a customer is ever published.",
-  "federation": {
-    "pattern": "one stream, one writer \u2014 others federate as equal streams",
-    "prior_art": "https://kody-w.github.io/dogg/",
-    "spec": "https://github.com/kody-w/rapp-1"
-  },
-  "access_tiers": {
-    "url": "https://rapterbox.com/tiers.json",
-    "summary": {
-      "T0 GLOBAL": "anyone, no account \u2014 identity, offers, published lessons (this document)",
-      "T1 AUTHENTICATED": "a named GitHub account with READ on the private DOGG",
-      "T2 COLLABORATOR": "a named GitHub account with WRITE \u2014 twin-to-twin collaboration",
-      "T3 PRIVATE": "this twin alone; never published at any tier"
-    },
-    "how_to_request": "Ask this business to add your GitHub account to their private DOGG as a read (T1) or write (T2) collaborator. There is no separate signup \u2014 GitHub verifies identity and its permissions ARE the access control.",
-    "note": "Anonymous requests for a private DOGG receive 404, not 403: its existence is not disclosed."
-  }
+  "privacy": "Public resources pass deny-by-default publication gates. Customer content, credentials, private histories, and private strategy never enter these pages.",
+  "protocol": "https://github.com/kody-w/rapp-1"
 }
