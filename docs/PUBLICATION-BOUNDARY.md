@@ -40,8 +40,34 @@ terms and remain forbidden.
 - **Rapter** is plural.
 - **RapterBox LLC** is the company.
 - **RapterBox** is also a separate company subproduct.
-- **RAPP** names the public foundation. Only its non-confidential foundation
-  and product-boundary material is eligible here.
+- **RAPP** is the external public open-source foundation. RapterBox LLC does
+  not own RAPP. Only non-confidential foundation and product-boundary material
+  is eligible here.
+- **RAPP/1** is the protocol authority maintained at the public
+  `kody-w/rapp-1` repository.
+
+## RAPP/1 conformance boundary
+
+These policy documents are publication controls. They do not emit RAPP
+artifacts and do not claim RAPP/1 protocol conformance. They do not define,
+replace, extend, or wrap the RAPP/1 frame, wire format, identity envelope, or
+lineage model.
+
+If a public work-loop record claims RAPP/1 conformance, its frame must have
+exactly these 11 top-level keys and no others, in protocol order:
+`spec`, `kind`, `stream_id`, `seq`, `utc`, `payload`, `payload_hash`, `prev`,
+`prev_wave`, `sig`, and `frame_hash`. The `spec` value must be `rapp/1`.
+Field shapes and semantics remain authoritative in `kody-w/rapp-1`; this
+publication policy does not create an alternate envelope.
+
+`data_slush`, when used, may appear only inside `payload`. The public gate
+limits its serialized value to 16 KiB, nesting depth to four, and collection
+items to 100. It must pass every private-content, secret, customer-data,
+legal-data, and URL check.
+
+Offspring and cross outputs require a fresh identity and typed parent lineage.
+They never inherit authority. Their identity and lineage representation must
+follow RAPP/1 directly; this policy defines no local substitute.
 
 ## URLs and repositories
 

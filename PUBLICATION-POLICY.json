@@ -17,7 +17,66 @@
     "Rapter": "Plural of Rappter.",
     "RapterBox LLC": "Company name.",
     "RapterBox": "Separate company subproduct name.",
-    "RAPP": "Public foundation name; only its non-confidential foundation and product-boundary material is public-eligible."
+    "RAPP": "External public open-source foundation name; only its non-confidential foundation and product-boundary material is public-eligible.",
+    "RAPP/1": "Protocol whose authority is the external public kody-w/rapp-1 repository."
+  },
+  "rapp_external_boundary": {
+    "foundation": {
+      "name": "RAPP",
+      "authority_repository": "kody-w/RAPP",
+      "relationship": "external_public_open_source_foundation",
+      "owned_by_rapterbox_llc": false,
+      "llc_ownership_claim": "forbidden"
+    },
+    "protocol": {
+      "name": "RAPP/1",
+      "spec_value": "rapp/1",
+      "authority_repository": "kody-w/rapp-1",
+      "relationship": "external_protocol_authority",
+      "local_redefinition": "forbidden"
+    },
+    "this_policy_artifact": {
+      "emits_rapp_artifacts": false,
+      "claims_rapp_1_protocol_conformance": false,
+      "boundary_statement": "This file defines a publication gate. It does not define, replace, extend, or emit the RAPP/1 frame, wire format, identity envelope, or lineage model."
+    },
+    "published_work_loop_records": {
+      "applies_when": "A candidate public artifact represents a work-loop record and claims RAPP/1 conformance.",
+      "exact_top_level_key_count": 11,
+      "exact_top_level_keys_in_order": [
+        "spec",
+        "kind",
+        "stream_id",
+        "seq",
+        "utc",
+        "payload",
+        "payload_hash",
+        "prev",
+        "prev_wave",
+        "sig",
+        "frame_hash"
+      ],
+      "required_spec_value": "rapp/1",
+      "additional_top_level_keys": "forbidden",
+      "alternate_frame_wire_or_identity_envelope": "forbidden",
+      "field_shapes_and_semantics_authority": "kody-w/rapp-1",
+      "data_slush": {
+        "allowed": true,
+        "allowed_json_pointer_prefix": "/payload",
+        "top_level_allowed": false,
+        "maximum_serialized_utf8_bytes": 16384,
+        "maximum_nesting_depth": 4,
+        "maximum_collection_items": 100,
+        "sensitivity_rule": "Must pass every secret, submitted-customer-data, non-public-legal-data, private-content, and URL prohibition in this policy."
+      },
+      "offspring_and_cross_outputs": {
+        "fresh_identity_required": true,
+        "typed_parent_lineage_required": true,
+        "authority_inheritance": "forbidden",
+        "identity_and_lineage_shape_authority": "kody-w/rapp-1",
+        "local_identity_or_lineage_shape_definition": "forbidden"
+      }
+    }
   },
   "public_allowed": {
     "categories": [
@@ -209,6 +268,10 @@
         {
           "id": "forbidden-nonpublic-legal",
           "regex": "\\battorney[\\s_-]*client[\\s_-]*privileged\\b|\\bprivileged[\\s_-]*and[\\s_-]*confidential\\b|\\blegal[\\s_-]*matter[\\s_-]*(?:id|number)\\b"
+        },
+        {
+          "id": "forbidden-rapp-llc-ownership-claim",
+          "regex": "\\brapterbox\\s+llc\\s+(?:owns|controls|holds\\s+ownership\\s+of)\\s+(?:the\\s+)?rapp\\b|\\brapp\\s+is\\s+(?:owned|controlled)\\s+by\\s+rapterbox\\s+llc\\b"
         }
       ]
     },
