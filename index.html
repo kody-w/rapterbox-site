@@ -1,319 +1,230 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RapterBox — work gets done without you thinking about it</title>
-<meta name="description" content="You are already begging your tools to remember what you said. A RapterBox runs the admin in the background and texts you only the decisions that are actually yours.">
-<meta property="og:title" content="RapterBox">
-<meta property="og:description" content="Work gets done without you thinking about it.">
+<title>RapterBox LLC — local intelligence you can own</title>
+<meta name="description" content="RapterBox builds locally owned AI organisms for people and businesses: Genesis 251 Holo species, RapterWorks jobs, and the RapterBox business twin.">
+<meta property="og:title" content="RapterBox LLC">
+<meta property="og:description" content="Local intelligence you can own, verify, grow, and move.">
 <meta property="og:type" content="website">
-<link rel="canonical" href="https://rapterbox.com/">
-<link rel="alternate" type="application/json" href="https://rapterbox.com/agent.json" title="Agent view of this business">
 <meta property="og:url" content="https://rapterbox.com/">
-<meta property="og:image" content="https://rapterbox.com/card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#0b0d11" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://rapterbox.com/">
+<link rel="alternate" type="application/json" href="https://rapterbox.com/agent.json" title="Agent view">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
- {"@type":"Organization","@id":"https://rapterbox.com/#org","name":"RapterBox LLC",
-  "url":"https://rapterbox.com/","description":"A small box on your network that runs a business's admin in the background and texts the owner only the decisions that are theirs."},
- {"@type":"Product","name":"RapterBox","brand":{"@id":"https://rapterbox.com/#org"},
-  "description":"A fully transferable, perpetually growing digital twin of a business that the owner can talk to. It runs the admin overnight and sends one morning brief.",
-  "audience":{"@type":"Audience","audienceType":"Small business owners and operators"}},
- {"@type":"FAQPage","mainEntity":[
-  {"@type":"Question","name":"Does it send emails or sign things for me?",
-   "acceptedAnswer":{"@type":"Answer","text":"No. It never sends, signs, pays or deletes on your behalf — there is no code path for those actions. A task needing one comes back to you as a decision, with the reversible work already finished."}},
-  {"@type":"Question","name":"What happens if it cannot see everything?",
-   "acceptedAnswer":{"@type":"Answer","text":"It refuses to act on partial evidence. It stops and says so rather than guessing confidently, because a confident wrong answer is worse than no answer."}},
-  {"@type":"Question","name":"What happens when the network drops?",
-   "acceptedAnswer":{"@type":"Answer","text":"It keeps working locally and reconciles when the connection returns. That is the right trade for a box in your office, and it means it is not a strongly consistent system."}},
-  {"@type":"Question","name":"Who owns the records?",
-   "acceptedAnswer":{"@type":"Answer","text":"You do. The box runs on your network and the records are append-only and verifiable without trusting us."}}]}]}
+  {"@type":"Organization","@id":"https://rapterbox.com/#org","name":"RapterBox LLC","url":"https://rapterbox.com/"},
+  {"@type":"Product","name":"Genesis 251 First Dimension","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rappter.com/"},
+  {"@type":"Product","name":"RapterBox for Business","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/#business"}
+]}
 </script>
-
 <style>
-:root{
-  --bg:#0b0d11;--card:#151922;--ink:#eef2f7;--dim:#94a0b1;--line:#232a35;
-  --go:#5b8cff;--ok:#3fb950;--warn:#e0a94a;
-  --edge:rgba(255,255,255,.05);
-  --glow:rgba(91,140,255,.13);--glow2:rgba(63,185,80,.05);
-  --ring:rgba(91,140,255,.30);
-  --shadow-1:0 1px 1px rgba(0,0,0,.12),0 4px 10px rgba(0,0,0,.14),0 14px 36px rgba(0,0,0,.22);
-  --shadow-2:0 1px 2px rgba(0,0,0,.22),0 12px 32px rgba(0,0,0,.28),0 36px 90px rgba(0,0,0,.38);
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
 }
-@media (prefers-color-scheme:light){:root{
-  --bg:#fbfcfd;--card:#fff;--ink:#10141a;--dim:#5b6675;--line:#e4e8ef;
-  --go:#0b5bd3;--ok:#1a7f37;--warn:#8a6100;
-  --edge:rgba(255,255,255,.9);
-  --glow:rgba(11,91,211,.065);--glow2:rgba(26,127,55,.04);
-  --ring:rgba(11,91,211,.22);
-  --shadow-1:0 1px 2px rgba(16,20,26,.04),0 6px 16px rgba(16,20,26,.05),0 18px 44px rgba(16,20,26,.07);
-  --shadow-2:0 1px 2px rgba(16,20,26,.05),0 14px 36px rgba(16,20,26,.08),0 40px 90px rgba(16,20,26,.10);
-}}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:28px}
-body{margin:0;background-color:var(--bg);color:var(--ink);
-  background-image:radial-gradient(1100px 540px at 50% -160px,var(--glow),transparent 70%),
-    radial-gradient(900px 480px at 88% 12%,var(--glow2),transparent 65%);
-  background-repeat:no-repeat;
-  font:17px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-synthesis:none}
-::selection{background:color-mix(in srgb,var(--go) 28%,transparent)}
-.w{max-width:760px;margin:0 auto;padding:0 24px}
-section{padding:clamp(64px,9vw,92px) 0;position:relative}
-section+section:before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line) 82%,transparent)}
-h1{font-size:clamp(34px,6.2vw,56px);line-height:1.05;letter-spacing:-.028em;margin:0 0 18px;font-weight:700;
-  text-wrap:balance;color:var(--ink);
-  background:linear-gradient(180deg,var(--ink) 58%,color-mix(in srgb,var(--ink) 62%,var(--dim)));
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-h2{font-size:clamp(24px,3.4vw,29px);line-height:1.18;letter-spacing:-.021em;margin:0 0 14px;font-weight:650;text-wrap:balance}
-.lede{font-size:20px;line-height:1.6;color:var(--dim);margin:0 0 26px;text-wrap:pretty}
-p{margin:14px 0;text-wrap:pretty}
-a{color:var(--go);text-decoration-color:color-mix(in srgb,var(--go) 32%,transparent);
-  text-underline-offset:3px;transition:text-decoration-color .18s ease}
-a:hover{text-decoration-color:var(--go)}
-:focus-visible{outline:2px solid var(--go);outline-offset:3px;border-radius:4px}
-.cta{display:inline-block;background:var(--go);
-  background:linear-gradient(180deg,color-mix(in srgb,var(--go) 84%,#fff),var(--go) 78%);
-  color:#fff;text-decoration:none;font-weight:600;padding:15px 32px;border-radius:12px;font-size:16.5px;
-  letter-spacing:-.01em;
-  box-shadow:0 1px 2px rgba(0,0,0,.24),0 8px 22px color-mix(in srgb,var(--go) 32%,transparent),inset 0 1px 0 rgba(255,255,255,.22);
-  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s cubic-bezier(.22,1,.36,1)}
-.cta:hover{transform:translateY(-1.5px);
-  box-shadow:0 2px 4px rgba(0,0,0,.24),0 12px 30px color-mix(in srgb,var(--go) 42%,transparent),inset 0 1px 0 rgba(255,255,255,.26)}
-.cta:active{transform:scale(.97);transition-duration:.1s}
-.fine{color:var(--dim);font-size:13.5px}
-.mono{font:13.5px/1.7 ui-monospace,Menlo,monospace}
-.phone{max-width:420px;margin:34px auto;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--card) 94%,#fff),var(--card) 42%);
-  border:1px solid var(--line);border-radius:26px;padding:16px 16px 12px;
-  box-shadow:inset 0 1px 0 var(--edge),var(--shadow-2)}
-.pbar{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12.5px;
-  padding:2px 6px 13px;border-bottom:1px solid var(--line);margin-bottom:14px}
-.pdot{width:24px;height:24px;border-radius:50%;flex:none;display:inline-block;
-  background:linear-gradient(135deg,color-mix(in srgb,var(--go) 65%,#fff),var(--go));
-  box-shadow:0 0 0 1px color-mix(in srgb,var(--go) 28%,transparent),0 2px 6px color-mix(in srgb,var(--go) 35%,transparent)}
-.ptime{margin-left:auto;font-variant-numeric:tabular-nums}
-.bubble{background:var(--bg);border:1px solid var(--line);border-radius:18px 18px 18px 6px;
-  padding:16px 18px;font:13.5px/1.75 ui-monospace,Menlo,monospace;max-width:100%;overflow-x:auto;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
-.pfoot{text-align:right;color:var(--dim);font-size:11.5px;padding:9px 6px 0;letter-spacing:.01em}
-.tag{color:var(--warn);font-weight:600}
-.ok{color:var(--ok)}
-.steps{counter-reset:s;padding:0;list-style:none;margin:26px 0 0}
-.steps li{counter-increment:s;position:relative;padding:0 0 26px 46px}
-.steps li:before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--card) 88%,#fff),var(--card));
-  border:1px solid var(--line);color:var(--go);
-  font:600 13.5px/28px ui-monospace,Menlo,monospace;text-align:center;
-  box-shadow:inset 0 1px 0 var(--edge),0 2px 6px rgba(0,0,0,.12)}
-.steps li:not(:last-child):after{content:"";position:absolute;left:15px;top:36px;bottom:6px;width:1px;
-  background:linear-gradient(180deg,var(--line),color-mix(in srgb,var(--line) 35%,transparent))}
-.steps b{display:block;letter-spacing:-.011em;margin-bottom:2px}
-.steps span{color:var(--dim)}
-.limits{padding:0;margin:18px 0}
-.limits li{color:var(--dim);padding:10px 0 10px 26px;position:relative;list-style:none}
-.limits li:before{content:"—";position:absolute;left:0;color:var(--warn)}
-.limits b{color:var(--ink)}
-form{background:linear-gradient(180deg,color-mix(in srgb,var(--card) 95%,#fff),var(--card) 45%);
-  border:1px solid var(--line);border-radius:18px;padding:28px 26px;
-  box-shadow:inset 0 1px 0 var(--edge),var(--shadow-1)}
-label{display:block;font-size:13px;font-weight:550;color:var(--dim);margin:16px 0 7px}
-input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:10px;
-  padding:13px 14px;font:15.5px inherit;transition:border-color .18s ease,box-shadow .18s ease}
-input:hover,textarea:hover{border-color:color-mix(in srgb,var(--line) 45%,var(--dim))}
-input:focus,textarea:focus{outline:none;border-color:var(--go);box-shadow:0 0 0 3.5px var(--ring)}
-textarea{min-height:72px;resize:vertical}
-button{margin-top:20px;width:100%;background:var(--go);
-  background:linear-gradient(180deg,color-mix(in srgb,var(--go) 84%,#fff),var(--go) 78%);
-  color:#fff;border:0;border-radius:11px;padding:15px;font:600 16.5px inherit;cursor:pointer;
-  box-shadow:0 1px 2px rgba(0,0,0,.24),0 6px 18px color-mix(in srgb,var(--go) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.22);
-  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s cubic-bezier(.22,1,.36,1)}
-button:hover{transform:translateY(-1px);
-  box-shadow:0 2px 4px rgba(0,0,0,.24),0 10px 26px color-mix(in srgb,var(--go) 40%,transparent),inset 0 1px 0 rgba(255,255,255,.26)}
-button:active{transform:scale(.98);transition-duration:.1s}
-button:disabled{opacity:.55;cursor:wait;transform:none}
-.msg{display:none;border-radius:12px;padding:18px;margin-top:16px;font-weight:600;text-align:center}
-#ok{border:1px solid var(--ok);color:var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent)}
-#no{border:1px solid var(--warn);color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
-footer{padding:34px 0 76px;color:var(--dim);font-size:13.5px;border-top:1px solid var(--line)}
-@media (prefers-reduced-motion:no-preference){
-  section:first-of-type .w>*{animation:rise .8s cubic-bezier(.22,1,.36,1) both}
-  section:first-of-type .w>*:nth-child(2){animation-delay:.07s}
-  section:first-of-type .w>*:nth-child(3){animation-delay:.14s}
-  section:first-of-type .w>*:nth-child(4){animation-delay:.21s}
-  section:first-of-type .w>*:nth-child(5){animation-delay:.28s}
-  .reveal{opacity:0;transform:translateY(14px);
-    transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
-  .reveal.in{opacity:1;transform:none}
-}
-@keyframes rise{from{opacity:0;transform:translateY(16px)}}
-.opt{font-weight:400;opacity:.7;font-size:.85em}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{margin:0;overflow-x:hidden;background:var(--cp-bg);color:var(--cp-text);font:17px/1.62 "Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif}
+a{color:var(--cp-link)}
+.shell{width:min(82rem,calc(100% - 2.5rem));margin-inline:auto}
+header{min-height:5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--cp-border)}
+.brand{color:var(--cp-text);font-weight:800;text-decoration:none}
+nav{display:flex;gap:1rem}nav a{color:var(--cp-text-muted);text-decoration:none}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;padding:.7rem 1rem;border:1px solid var(--cp-accent);border-radius:.625rem;color:var(--cp-accent-fg);background:var(--cp-accent);font-weight:700;text-decoration:none;cursor:pointer}
+.button.secondary{color:var(--cp-text);background:var(--cp-surface);border-color:var(--cp-border)}
+.hero{padding-block:clamp(5rem,10vw,9rem)}
+.eyebrow{margin:0 0 1rem;color:var(--cp-accent);font:700 .78rem/1.2 Consolas,"Courier New",Courier,monospace;letter-spacing:.14em}
+h1,h2,h3,p{margin-top:0;overflow-wrap:anywhere}
+h1{max-width:15ch;margin-bottom:1.4rem;font-size:clamp(3.1rem,8vw,7rem);line-height:.95;letter-spacing:-.07em}
+h2{font-size:clamp(2rem,4vw,3.8rem);line-height:1;letter-spacing:-.05em}
+.lede{max-width:48rem;color:var(--cp-text-muted);font-size:clamp(1.05rem,2vw,1.35rem)}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
+section{padding-block:5rem;border-top:1px solid var(--cp-border)}
+.products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.product{display:flex;flex-direction:column;min-height:28rem;padding:1.5rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);box-shadow:var(--cp-shadow)}
+.product h2{margin-bottom:1rem}.product p{color:var(--cp-text-muted)}.product ul{padding-left:1.2rem;color:var(--cp-text-muted)}.product .actions{margin-top:auto}
+.proof{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+.proof div{padding:1rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface)}
+.proof strong{display:block;margin-bottom:.3rem}.proof span{color:var(--cp-text-muted);font-size:.85rem}
+.business-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(20rem,.75fr);gap:3rem;align-items:start}
+.brief{padding:1.2rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);box-shadow:var(--cp-shadow);font: .83rem/1.65 Consolas,"Courier New",Courier,monospace;white-space:pre-wrap}
+form{padding:1.5rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface)}
+label{display:grid;gap:.4rem;margin-top:1rem;font-weight:700;font-size:.86rem}
+input,textarea{width:100%;min-height:2.9rem;padding:.75rem .85rem;border:1px solid var(--cp-border);border-radius:.625rem;color:var(--cp-text);background:var(--cp-bg);font:inherit}textarea{min-height:6rem}
+button{width:100%;margin-top:1rem}.message{display:none;margin-top:1rem;color:var(--cp-success);font-weight:700}
+.fine{color:var(--cp-text-muted);font-size:.8rem}
+.opt{font-weight:400;color:var(--cp-text-muted)}
+footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4rem;border-top:1px solid var(--cp-border);color:var(--cp-text-muted);font-size:.8rem}
+@media(max-width:780px){.shell{width:calc(100% - 2rem)}nav{display:none}.products,.business-grid,.proof{grid-template-columns:1fr}.product{min-height:0}.actions{width:100%}.actions .button{flex:1 1 10rem}footer{flex-direction:column}}
 </style>
 </head>
 <body>
+<header class="shell">
+  <a class="brand" href="/">R/ RapterBox LLC</a>
+  <nav><a href="#products">Products</a><a href="#business">For business</a><a href="/agent.json">Agent view</a></nav>
+</header>
+<main>
+  <section class="hero" style="border-top:0"><div class="shell">
+    <p class="eyebrow">ONE COMPANY / LOCAL-FIRST INTELLIGENCE</p>
+    <h1>Intelligence you can own, grow, verify, and move.</h1>
+    <p class="lede">RapterBox builds Holo organisms for people and local business twins for operators. Both use append-only frames, portable ownership, bounded autonomy, and evidence instead of theater.</p>
+    <div class="actions"><a class="button" href="https://rappter.com/">Enter the First Dimension</a><a class="button secondary" href="#business">See the business box</a></div>
+  </div></section>
 
-<section>
-  <div class="w">
-    <h1>You are already begging your tools to remember what you said.</h1>
-    <p class="lede">The riffs, the decisions, the rule you made up on a call — all of it
-    evaporates, because keeping the record is your job on top of the job.</p>
-    <p style="font-size:21px;margin:0 0 28px"><b>Work gets done without you thinking about it.</b></p>
-    <a class="cta" href="#join">Join the waitlist</a>
-    <p class="fine" style="margin-top:14px">A small box on your network. You own it, and the records.</p>
-  </div>
-</section>
-
-<section>
-  <div class="w">
-    <h2>This arrives as a text at 7am. You do nothing to make it happen.</h2>
-    <p style="color:var(--dim);margin-top:0">A real brief, redacted. Not a mockup — and not an
-    app you have to open.</p>
-
-    <div class="phone">
-      <div class="pbar"><span class="pdot"></span> <b>Northgate Property Co.</b> <span class="ptime">7:00 AM</span></div>
-      <div class="bubble">
-        <b>Tue 25 Aug — morning brief</b><br><br>
-        <b>NEEDS YOU (3)</b><br>
-        • <span class="tag">compliance</span> — subscription lapses in 6 days<br>
-        • <span class="tag">legal</span> — provisional conversion deadline on file<br>
-        • <span class="tag">money</span> — invoice unpaid 21 days<br><br>
-        <b>HANDLED WHILE YOU SLEPT</b><br>
-        <span class="ok">✓</span> 63 drift findings repaired across 4 machines<br>
-        <span class="ok">✓</span> duplicate alerts quieted — 485 texts → 95<br>
-        <span class="ok">✓</span> 12 records appended, 0 broken<br><br>
-        <b>QUIETED</b><br>
-        41 things that did not need you
-      </div>
-      <div class="pfoot">Delivered</div>
+  <section id="products"><div class="shell">
+    <p class="eyebrow">TWO PRODUCTS / ONE TRUST MODEL</p>
+    <div class="products">
+      <article class="product">
+        <h2>Holo Zoo: First Edition / First Dimension</h2>
+        <p>251 signed species slots in one 16×16 catalog frame. After rights clearance, each reveal can open a canonical Holo, original piano Growl, proof-first jobs, and owner-instance hatching.</p>
+        <ul><li>Signed Holodex API</li><li>Owner-controlled dimension branches</li><li>Private mutation freedom</li><li>Optional DOGG certification and resale</li><li>Certified dealer network</li></ul>
+        <div class="actions"><a class="button" href="https://rappter.com/">Explore Rappter</a><a class="button secondary" href="https://kody-w.github.io/holodex/">Open Holodex</a></div>
+      </article>
+      <article class="product">
+        <h2>RapterBox for Business</h2>
+        <p>A local-first twin that does reversible admin work, preserves a verifiable record, and texts the owner only the decisions that remain human.</p>
+        <ul><li>7am brief</li><li>Append-only receipts ledger</li><li>Provider-neutral AI</li><li>Local credentials and records</li><li>No autonomous signing, paying, sending, or deletion</li></ul>
+        <div class="actions"><a class="button" href="#business">Join the business waitlist</a><a class="button secondary" href="/ai">Agent handoff</a></div>
+      </article>
     </div>
+  </div></section>
 
-    <p>Three decisions, not forty notifications. Everything above the line is yours; everything
-    below it was already done and can be checked.</p>
-    <p class="fine">It texts you <b>as your business</b>, from its own number — the twin is named
-    for your company, not for us. Not one more app asking for your attention.</p>
-  </div>
-</section>
+  <section><div class="shell">
+    <p class="eyebrow">THE SHARED CONTRACT</p>
+    <div class="proof">
+      <div><strong>Own locally</strong><span>Capsules move across compatible devices and keep working offline.</span></div>
+      <div><strong>Verify independently</strong><span>Frames, title, lineage, and releases can be checked without trusting a dashboard.</span></div>
+      <div><strong>Automate by evidence</strong><span>Autonomy expands from passing outcomes and explicit policy.</span></div>
+      <div><strong>Keep private things private</strong><span>DOGG can travel. Credentials, private memories, and customer bodies stay local.</span></div>
+    </div>
+  </div></section>
 
-<section>
-  <div class="w">
-    <h2>How it works</h2>
-    <ol class="steps">
-      <li><b>You talk. It records.</b><span>Say it however it comes out. The paper trail builds
-      itself — decisions, rules, what you tried, what broke. You never file anything.</span></li>
-      <li><b>It does the reversible work.</b><span>Repairs, drafts, reports, checks. Everything
-      it does leaves a receipt you can verify without trusting us.</span></li>
-      <li><b>It wakes you with what is actually yours.</b><span>One message. The two or three
-      calls only a human can make, with the work leading up to them already finished.</span></li>
-    </ol>
-  </div>
-</section>
+  <section id="business"><div class="shell business-grid">
+    <div>
+      <p class="eyebrow">RAPTERBOX FOR BUSINESS</p>
+      <h2>Three decisions, not forty notifications.</h2>
+      <p class="lede">The business twin handles bounded reversible work overnight and delivers one brief with what needs the owner, what was handled, and what stayed quiet.</p>
+      <ul>
+        <li>Runs on the business's own hardware.</li>
+        <li>Records append-only receipts.</li>
+        <li>Refuses partial evidence.</li>
+        <li>Never sends, signs, pays, or deletes without the required human action.</li>
+      </ul>
+    </div>
+    <div class="brief">7:00 AM — MORNING BRIEF
 
-<section>
-  <div class="w">
-    <h2>What it will not do</h2>
-    <p style="color:var(--dim);margin-top:0">Worth knowing before you buy, not after.</p>
-    <ul class="limits">
-      <li><b>It never sends, signs, pays or deletes on your behalf.</b> There is no code path for
-      those. A task needing one comes back as a decision, with the safe part already done.</li>
-      <li><b>It refuses to act on partial evidence.</b> If it cannot see everything, it stops and
-      says so rather than guessing confidently — the reason
-      <a href="/silent-failures">scheduled jobs fail silently on macOS</a> is that most tools do
-      the opposite.</li>
-      <li><b>It keeps working when the network drops</b> and reconciles later. That is the right
-      trade for a box in your office, and it is not a strongly consistent system.</li>
-      <li><b>Agreement is evidence, not proof.</b> Machines that share a fault can agree and still
-      be wrong, so the checks are spread across different systems on purpose.</li>
-    </ul>
-  </div>
-</section>
+NEEDS YOU
+• renewal decision due Friday
+• invoice 21 days overdue
 
-<section>
-  <div class="w">
-    <h2>Running AI where the answers matter?</h2>
-    <p style="color:var(--dim);margin-top:0">For teams with agents in production making
-    consequential decisions, we do something more specific. Start with the essay —
-    <a href="/wrong-game">You're testing your AI at the wrong moment</a> — and if it
-    reads like it was written about your team, <a href="/invite">the invitation</a> has
-    everything else, including who it's not for.</p>
-  </div>
-</section>
+HANDLED
+✓ evidence packet prepared
+✓ duplicate alerts quieted
+✓ records appended
 
-<section id="join">
-  <div class="w">
-    <h2>Join the waitlist</h2>
-    <p style="color:var(--dim);margin-top:0">The waitlist is how priority is decided. When the
-    product fully launches, boxes go out in the order people joined — and the first group gets
-    set up with us directly.</p>
-    <form id="f" method="POST" action="https://formspree.io/f/mgawgado">
-      <label for="n">Name</label><input id="n" name="name" autocomplete="name" maxlength="100" required>
-      <label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" required>
-      <label for="p">Phone <span class="opt">(optional — a real text from Kody's number when your spot opens)</span></label><input id="p" name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="+1 404 555 0123">
-      <label for="u">What would you want it handling?</label>
-      <textarea id="u" name="note" maxlength="2000" placeholder="the machines, agents, automations or admin you keep having to chase"></textarea>
-      <input type="hidden" name="source" value="rapterbox.com">
-      <button id="b" type="submit">Join the waitlist</button>
-      <p id="f-msg" role="status" aria-live="polite"></p>
-      <p class="fine" style="text-align:center;margin:12px 0 0">No newsletter. We write when there is something to say.</p>
+QUIETED
+41 things that did not need you</div>
+  </div></section>
+
+  <section><div class="shell business-grid">
+    <div><p class="eyebrow">BUSINESS WAITLIST</p><h2>Put your business in line for a box.</h2><p class="lede">The Holo species launch and the business-box launch are separate products. This form is only for the local business twin.</p></div>
+    <form id="waitlist" method="POST" action="https://formspree.io/f/mgawgado">
+      <label for="name">Name<input id="name" name="name" autocomplete="name" required></label>
+      <label for="email">Email<input id="email" name="email" type="email" autocomplete="email" required></label>
+      <label for="phone">Phone <span class="opt">(optional — receive a real text when your spot opens)</span><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="20" placeholder="+1 404 555 0123"></label>
+      <label for="note">What should the box handle?<textarea id="note" name="note"></textarea></label>
+      <input type="hidden" name="source" value="rapterbox.com-business">
+      <button class="button" type="submit">Join the business waitlist</button>
+      <p class="fine">No payment. No newsletter. Holo reveal requests belong on rappter.com.</p>
     </form>
-    <script src="waitlist-config.js"></script>
-    <script>
-    // Waitlist confirmations: when WAITLIST_ENDPOINT is set (the Apps Script web app that runs
-    // as wildhavenhomesllc@gmail.com), the signup posts there and a real email — and a real text,
-    // if a phone was given — comes back. Empty endpoint = the form submits to Formspree as before.
-    (function () {
-      var WAITLIST_ENDPOINT = window.WAITLIST_ENDPOINT || '';
-      var f = document.getElementById('f'), b = document.getElementById('b'), msg = document.getElementById('f-msg');
-      if (!f || !WAITLIST_ENDPOINT) return;
-      f.addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        var data = { name: f.name.value, email: f.email.value, phone: (f.phone && f.phone.value) || '', note: (f.note && f.note.value) || '', source: 'rapterbox.com' };
-        b.disabled = true; msg.textContent = 'Sending…';
-        fetch(WAITLIST_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) })
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            if (!j.ok) throw new Error(j.error || 'refused');
-            msg.textContent = j.welcomed === false
-              ? 'You were already on the list — nothing to do.'
-              : ('Done. Check ' + data.email + ' — a real email is on its way' + (data.phone ? ', and a text will follow from Kody\'s number.' : '.'));
-            f.reset();
-          })
-          .catch(function () { msg.textContent = 'That didn\'t go through — sending the old way…'; f.removeEventListener('submit', arguments.callee); HTMLFormElement.prototype.submit.call(f); })
-          .finally(function () { b.disabled = false; });
-      });
-    })();
-    </script>
-    <div class="msg" id="ok">You're on the waitlist. You'll hear from us before the first boxes ship.</div>
-    <div class="msg" id="no">That didn't send. Try again in a moment.</div>
-  </div>
-</section>
-
-<footer><div class="w">
-  RapterBox LLC · one RapterBox, many RapterBoxes · <a href="/ai">for AI agents</a><br>
-  Built on <a href="https://github.com/kody-w/rapp-1">RAPP</a>, the open foundation — credited, not claimed.
-</div></footer>
-
+    <p class="message" id="message">You're on the business waitlist.</p>
+  </div></section>
+</main>
+<footer class="shell">
+  <span>RapterBox LLC · RAPP/1-native products</span>
+  <span><a href="https://rappter.com/">Rappter</a> · <a href="https://kody-w.github.io/holodex/">Holodex</a> · <a href="/ai">For AI agents</a></span>
+</footer>
+<script src="waitlist-config.js"></script>
 <script>
-const f=document.getElementById('f'),b=document.getElementById('b'),ok=document.getElementById('ok'),no=document.getElementById('no');
-f.addEventListener('submit',async ev=>{
-  ev.preventDefault();b.disabled=true;b.textContent='sending…';no.style.display='none';
+const form=document.getElementById("waitlist"),message=document.getElementById("message");
+form.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const button=form.querySelector("button");
+  button.disabled=true;
   try{
-    const r=await fetch(f.action,{method:'POST',body:new FormData(f),headers:{Accept:'application/json'}});
-    if(!r.ok)throw 0;
-    f.style.display='none';ok.style.display='block';
-  }catch(e){b.disabled=false;b.textContent='Join the waitlist';no.style.display='block';}
+    const endpoint=window.WAITLIST_ENDPOINT||"";
+    let response;
+    if(endpoint){
+      const data={name:form.name.value,email:form.email.value,phone:form.phone.value||"",note:form.note.value||"",source:"rapterbox.com-business"};
+      response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)});
+    }else{
+      response=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{Accept:"application/json"}});
+    }
+    if(!response.ok)throw new Error();
+    form.hidden=true;
+    message.style.display="block";
+  }catch(error){
+    button.disabled=false;
+    button.textContent="Try again";
+  }
 });
-(()=>{try{
-  if(!matchMedia('(prefers-reduced-motion: no-preference)').matches||!('IntersectionObserver'in window))return;
-  const els=document.querySelectorAll('section:not(:first-of-type) .w>*:not(.msg), footer .w');
-  const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}},
-    {rootMargin:'0px 0px -6% 0px',threshold:.08});
-  els.forEach(el=>{el.classList.add('reveal');io.observe(el)});
-  setTimeout(()=>{els.forEach(el=>el.classList.add('in'))},1600);
-}catch(e){}})();
 </script>
 </body>
 </html>

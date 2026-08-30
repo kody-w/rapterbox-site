@@ -1,8 +1,14 @@
 # rapterbox.com
 
-> RapterBox: local-first digital organisms for businesses, decision-time AI assurance for teams, and DOGG — the global tick network for orienting AIs.
+> The RapterBox LLC product portfolio: Genesis 251 Holo species for people and
+> a local-first business twin for operators.
 
-- The box (SMB): https://rapterbox.com/
-- AI assurance (the essay first): https://rapterbox.com/wrong-game then https://rapterbox.com/invite
-- DOGG, the global tick network: https://rapterbox.com/dogg (orient: https://kody-w.github.io/dogg/orient.json)
-- Agent view of this business: https://rapterbox.com/agent.json
+- First Edition / First Dimension: https://rappter.com/
+- Holodex: https://kody-w.github.io/holodex/
+- Business twin and waitlist: https://rapterbox.com/#business
+- AI assurance: https://rapterbox.com/wrong-game then https://rapterbox.com/invite
+- DOGG: https://rapterbox.com/dogg
+- Public agent contract: https://rapterbox.com/agent.json
+
+The Holo product and business-box product are separate offers built on the same
+RAPP/1 ownership, verification, privacy, and bounded-autonomy model.
