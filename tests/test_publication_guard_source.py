@@ -62,6 +62,41 @@ class PublicationGuardSourceTests(unittest.TestCase):
         self.assertEqual(first["binary_paths"], ["assets/pixel.bin"])
         self.assertFalse(first["policy_loaded"])
 
+    def test_public_rapp_boundary_is_preserved_without_claiming_protocol_output(self) -> None:
+        self.write(
+            "public-boundary.txt",
+            "RAPP is the external public open-source foundation.\n"
+            "RAPP/1 is the protocol authority.\n",
+        )
+
+        report = publication_guard.scan_repository(
+            self.root, manifest=["public-boundary.txt"]
+        )
+
+        self.assertEqual(report["finding_count"], 0)
+        self.assertEqual(
+            report["artifact_boundary"],
+            "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts",
+        )
+        self.assertNotIn("frame", report)
+        self.assertNotIn("payload", report)
+
+    def test_llc_stake_claim_about_rapp_is_rejected(self) -> None:
+        self.write(
+            "ownership-claim.txt",
+            "RapterBox LLC "
+            + "owns "
+            + "51%"
+            + " of RAPP.\n",
+        )
+
+        report = publication_guard.scan_repository(
+            self.root, manifest=["ownership-claim.txt"]
+        )
+
+        self.assertEqual(self.rules(report), ["ownership_percentage_claim"])
+        self.assertNotIn("51%", json.dumps(report))
+
     def test_policy_rules_are_case_insensitive_and_policy_is_not_self_scanned(self) -> None:
         forbidden_phrase = "Internal " + "Founding Doctrine"
         private_slug = "wildhaven/" + "private-foundation"

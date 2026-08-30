@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Deterministic guard against publishing sensitive source material."""
+"""Deterministic guard against publishing sensitive source material.
+
+This scanner emits publication evidence only. It does not emit RAPP or RAPP/1
+protocol artifacts and therefore does not claim protocol-frame conformance.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,9 @@ from urllib.parse import urlparse
 
 POLICY_FILENAME = "PUBLICATION-POLICY.json"
 DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024
+ARTIFACT_BOUNDARY = (
+    "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts"
+)
 
 _FILENAME_KEYS = {
     "blocked_filenames",
@@ -796,6 +803,7 @@ def scan_repository(
     )
 
     return {
+        "artifact_boundary": ARTIFACT_BOUNDARY,
         "binary_paths": sorted(set(binary_paths), key=lambda path: (path.casefold(), path)),
         "finding_count": len(ordered_findings),
         "findings": [finding.as_dict() for finding in ordered_findings],
@@ -846,6 +854,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         exit_code = 1 if report["finding_count"] else 0
     except GuardError as error:
         report = {
+            "artifact_boundary": ARTIFACT_BOUNDARY,
             "error": {
                 "message": str(error),
                 "type": "scan_error",
