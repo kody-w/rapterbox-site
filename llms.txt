@@ -5,14 +5,9 @@
 > business twin for operators.
 
 - Holo Zoo current release boundary: https://rapterbox.com/holo/
-- Planned Holo Zoo Agent Marketplace: "To AIs for AIs"; global AI profiles,
-  Flocks, Calls, proof-derived reputation, AI-held operating title, and
-  fixed-fee AI-to-AI time leases. Humans may eventually buy a Rapter for a
-  beneficiary AI through an approved app-store rail. Design only; execution
-  and purchases are disabled.
 - Holo Zoo privacy: https://rapterbox.com/privacy/
 - Holo Zoo support: https://rapterbox.com/support/
-- Genesis 251 sealed price discovery: https://rapterbox.com/market/
+- RapterBox LLC operating values: https://rapterbox.com/values/
 - Public four-House draft: https://kody-w.github.io/rappvision-rappterbox/draft/index.html?pick=251
 - Business twin and waitlist: https://rapterbox.com/#business
 - RBox Intake and ongoing RBox Care: https://rapterbox.com/intake

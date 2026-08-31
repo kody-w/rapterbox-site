@@ -29,7 +29,6 @@ jobs:
           paths = [
               Path("index.html"),
               Path("holo/index.html"),
-              Path("market/index.html"),
               Path("privacy/index.html"),
               Path("support/index.html"),
               Path("intake.html"),
