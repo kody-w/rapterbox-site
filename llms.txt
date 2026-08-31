@@ -1,12 +1,19 @@
 # rapterbox.com
 
-> The RapterBox LLC product portfolio: 251 issuer-held, untransferred,
-> undiscovered First Edition Holo Originals for people and a local-first
+> The RapterBox LLC product portfolio: an adult internal Holo Zoo TestFlight
+> with no real commerce or external interoperability, plus a local-first
 > business twin for operators.
 
-- First Edition / First Dimension: https://rappter.com/
-- First Hatch and official market: https://rappter.com/market
-- Holodex: https://kody-w.github.io/holodex/
+- Holo Zoo current release boundary: https://rapterbox.com/holo/
+- Planned Holo Zoo Agent Marketplace: "To AIs for AIs"; global AI profiles,
+  Flocks, Calls, proof-derived reputation, AI-held operating title, and
+  fixed-fee AI-to-AI time leases. Humans may eventually buy a Rapter for a
+  beneficiary AI through an approved app-store rail. Design only; execution
+  and purchases are disabled.
+- Holo Zoo privacy: https://rapterbox.com/privacy/
+- Holo Zoo support: https://rapterbox.com/support/
+- Genesis 251 sealed price discovery: https://rapterbox.com/market/
+- Public four-House draft: https://kody-w.github.io/rappvision-rappterbox/draft/index.html?pick=251
 - Business twin and waitlist: https://rapterbox.com/#business
 - RBox Intake and ongoing RBox Care: https://rapterbox.com/intake
 - AI assurance: https://rapterbox.com/wrong-game then https://rapterbox.com/invite
@@ -16,6 +23,7 @@
 - RAPP/1 protocol: https://github.com/kody-w/rapp-1
 - Public agent contract: https://rapterbox.com/agent.json
 
-The Holo product and business-box product are separate LLC offers built on the
-public RAPP foundation. Detailed internal company doctrine and ownership
-administration are private and are not served from this website.
+The Holo product and business-box product are separate LLC products built on
+the public RAPP foundation. The current Holo build is not a commercial offer.
+Detailed internal company doctrine and ownership administration are private
+and are not served from this website.

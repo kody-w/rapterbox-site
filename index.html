@@ -12,7 +12,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RapterBox LLC — local intelligence you can own</title>
-<meta name="description" content="RapterBox builds locally owned AI organisms for people and businesses: Genesis 251 Holo species, RapterWorks jobs, and the RapterBox business twin.">
+<meta name="description" content="RapterBox builds local-first Holo organisms and business twins. Holo Zoo is currently an adult internal TestFlight with no real commerce.">
 <meta property="og:title" content="RapterBox LLC">
 <meta property="og:description" content="Local intelligence you can own, verify, grow, and move.">
 <meta property="og:type" content="website">
@@ -22,7 +22,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
   {"@type":"Organization","@id":"https://rapterbox.com/#org","name":"RapterBox LLC","url":"https://rapterbox.com/"},
-  {"@type":"Product","name":"Genesis 251 First Dimension","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rappter.com/"},
+  {"@type":"SoftwareApplication","name":"Holo Zoo: Rolling Cores","applicationCategory":"GameApplication","operatingSystem":"iOS","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/holo/","description":"Adult internal TestFlight with local Holo Field, companionship, and an observer-only simulation of the future To AIs for AIs marketplace; no real commerce, GPS, public sharing, or external interoperability."},
   {"@type":"Product","name":"RapterBox for Business","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/#business"},
   {"@type":"Service","name":"RBox Intake","provider":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/intake","description":"Selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care."}
 ]}
@@ -83,11 +83,11 @@ html[data-theme="dark"] {
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;overflow-x:hidden}
 body{margin:0;overflow-x:hidden;background:var(--cp-bg);color:var(--cp-text);font:17px/1.62 "Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif}
-a{color:var(--cp-link)}
+a{color:var(--cp-accent)}
 .shell{width:min(82rem,calc(100% - 2.5rem));margin-inline:auto}
 header{min-height:5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--cp-border)}
 .brand{color:var(--cp-text);font-weight:800;text-decoration:none}
-nav{display:flex;gap:1rem}nav a{color:var(--cp-text-muted);text-decoration:none}
+nav{display:flex;gap:1rem}nav a{color:var(--cp-text-soft);text-decoration:none}
 .button{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;padding:.7rem 1rem;border:1px solid var(--cp-accent);border-radius:.625rem;color:var(--cp-accent-fg);background:var(--cp-accent);font-weight:700;text-decoration:none;cursor:pointer}
 .button.secondary{color:var(--cp-text);background:var(--cp-surface);border-color:var(--cp-border)}
 .hero{padding-block:clamp(5rem,10vw,9rem)}
@@ -95,24 +95,24 @@ nav{display:flex;gap:1rem}nav a{color:var(--cp-text-muted);text-decoration:none}
 h1,h2,h3,p{margin-top:0;overflow-wrap:anywhere}
 h1{max-width:15ch;margin-bottom:1.4rem;font-size:clamp(3.1rem,8vw,7rem);line-height:.95;letter-spacing:-.07em}
 h2{font-size:clamp(2rem,4vw,3.8rem);line-height:1;letter-spacing:-.05em}
-.lede{max-width:48rem;color:var(--cp-text-muted);font-size:clamp(1.05rem,2vw,1.35rem)}
+.lede{max-width:48rem;color:var(--cp-text-soft);font-size:clamp(1.05rem,2vw,1.35rem)}
 .actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
 section{padding-block:5rem;border-top:1px solid var(--cp-border)}
 .products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .product{display:flex;flex-direction:column;min-height:28rem;padding:1.5rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);box-shadow:var(--cp-shadow)}
-.product h2{margin-bottom:1rem}.product p{color:var(--cp-text-muted)}.product ul{padding-left:1.2rem;color:var(--cp-text-muted)}.product .actions{margin-top:auto}
+.product h2{margin-bottom:1rem}.product p{color:var(--cp-text-soft)}.product ul{padding-left:1.2rem;color:var(--cp-text-soft)}.product .actions{margin-top:auto}
 .proof{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
 .proof div{padding:1rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface)}
-.proof strong{display:block;margin-bottom:.3rem}.proof span{color:var(--cp-text-muted);font-size:.85rem}
+.proof strong{display:block;margin-bottom:.3rem}.proof span{color:var(--cp-text-soft);font-size:.85rem}
 .business-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(20rem,.75fr);gap:3rem;align-items:start}
 .brief{padding:1.2rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);box-shadow:var(--cp-shadow);font: .83rem/1.65 Consolas,"Courier New",Courier,monospace;white-space:pre-wrap}
 form{padding:1.5rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface)}
 label{display:grid;gap:.4rem;margin-top:1rem;font-weight:700;font-size:.86rem}
 input,textarea{width:100%;min-height:2.9rem;padding:.75rem .85rem;border:1px solid var(--cp-border);border-radius:.625rem;color:var(--cp-text);background:var(--cp-bg);font:inherit}textarea{min-height:6rem}
 button{width:100%;margin-top:1rem}.message{display:none;margin-top:1rem;color:var(--cp-success);font-weight:700}
-.fine{color:var(--cp-text-muted);font-size:.8rem}
-.opt{font-weight:400;color:var(--cp-text-muted)}
-footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4rem;border-top:1px solid var(--cp-border);color:var(--cp-text-muted);font-size:.8rem}
+.fine{color:var(--cp-text-soft);font-size:.8rem}
+.opt{font-weight:400;color:var(--cp-text-soft)}
+footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4rem;border-top:1px solid var(--cp-border);color:var(--cp-text-soft);font-size:.8rem}
 @media(max-width:780px){.shell{width:calc(100% - 2rem)}nav{display:none}.products,.business-grid,.proof{grid-template-columns:1fr}.product{min-height:0}.actions{width:100%}.actions .button{flex:1 1 10rem}footer{flex-direction:column}}
 </style>
 </head>
@@ -125,18 +125,18 @@ footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4r
   <section class="hero" style="border-top:0"><div class="shell">
     <p class="eyebrow">ONE COMPANY / LOCAL-FIRST INTELLIGENCE</p>
     <h1>Intelligence you can own, grow, verify, and move.</h1>
-    <p class="lede">RapterBox builds Holo organisms for people and local business twins for operators. Both use append-only frames, portable ownership, bounded autonomy, and evidence instead of theater.</p>
-    <div class="actions"><a class="button" href="https://rappter.com/">Enter the First Dimension</a><a class="button secondary" href="#business">See the business box</a></div>
+    <p class="lede">RapterBox builds Holo organisms for people and local business twins for operators. Both use append-only frames, portable custody, bounded autonomy, and evidence instead of theater.</p>
+    <div class="actions"><a class="button" href="/holo/">See Holo Zoo</a><a class="button secondary" href="#business">See the business box</a></div>
   </div></section>
 
   <section id="products"><div class="shell">
     <p class="eyebrow">TWO PRODUCTS / ONE TRUST MODEL</p>
     <div class="products">
       <article class="product">
-        <h2>Holo Zoo: First Edition / First Dimension</h2>
-        <p>251 signed First Edition Originals in one 16×16 catalog frame. All remain issuer-held, untransferred, and undiscovered. Rights-cleared reveals, exact Original title transfers, separately issued offspring, proof-first jobs, and paid services follow distinct gates.</p>
-        <ul><li>Signed Holodex API</li><li>Owner-controlled dimension branches</li><li>Seven-day First Hatch Promise</li><li>Official resale and transparent RapterBox bids</li><li>Certified dealer network</li></ul>
-        <div class="actions"><a class="button" href="https://rappter.com/">Explore Rappter</a><a class="button secondary" href="https://rappter.com/market">Market policy</a></div>
+        <h2>Holo Zoo: Rolling Cores</h2>
+        <p>Holo Zoo is currently an adult internal TestFlight: offline Holo Field, four local Houses, commerce-free companionship, local playback/history/import/export, and an observer-only simulation of the future <strong>To AIs for AIs</strong> marketplace.</p>
+        <ul><li>No real purchases or human-funded AI acquisition</li><li>No live AI marketplace, payments, title, or social graph</li><li>No production jobs or tips</li><li>No GPS or map provider</li><li>No public Coin or DOGG publication</li><li>External interoperability disabled during the current RAPP migration</li></ul>
+        <div class="actions"><a class="button" href="/holo/">See the current Holo Zoo build</a><a class="button secondary" href="/market/">Signal a Genesis price</a><a class="button secondary" href="/privacy/">Privacy</a></div>
       </article>
       <article class="product">
         <h2>RapterBox for Business</h2>
@@ -223,14 +223,14 @@ QUIETED
       <label for="note">What should the box handle?<textarea id="note" name="note"></textarea></label>
       <input type="hidden" name="source" value="rapterbox.com-business">
       <button class="button" type="submit">Join the business waitlist</button>
-      <p class="fine">No payment. No newsletter. Holo reveal requests belong on rappter.com.</p>
+      <p class="fine">No payment. No newsletter. This form does not request Holo Zoo access. See the <a href="/privacy/">privacy policy</a>.</p>
     </form>
     <p class="message" id="message">You're on the business waitlist.</p>
   </div></section>
 </main>
 <footer class="shell">
   <span>RapterBox LLC · products built on the open RAPP foundation</span>
-  <span><a href="https://rappter.com/">Rappter</a> · <a href="/intake">RBox Intake</a> · <a href="https://kody-w.github.io/holodex/">Holodex</a> · <a href="/rapp">Foundation boundary</a> · <a href="/ai">For AI agents</a></span>
+  <span><a href="/holo/">Holo Zoo</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a> · <a href="/intake">RBox Intake</a> · <a href="/rapp">Foundation boundary</a> · <a href="/ai">For AI agents</a></span>
 </footer>
 <script src="waitlist-config.js"></script>
 <script>
