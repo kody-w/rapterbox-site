@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent
 PAGES = [
     ROOT / "index.html",
     ROOT / "holo" / "index.html",
-    ROOT / "market" / "index.html",
+    ROOT / "values" / "index.html",
     ROOT / "privacy" / "index.html",
     ROOT / "support" / "index.html",
 ]
@@ -31,7 +31,7 @@ def main() -> None:
 
     for path, canonical in (
         (ROOT / "holo" / "index.html", "https://rapterbox.com/holo/"),
-        (ROOT / "market" / "index.html", "https://rapterbox.com/market/"),
+        (ROOT / "values" / "index.html", "https://rapterbox.com/values/"),
         (ROOT / "privacy" / "index.html", "https://rapterbox.com/privacy/"),
         (ROOT / "support" / "index.html", "https://rapterbox.com/support/"),
     ):
@@ -44,8 +44,7 @@ def main() -> None:
         "adult internal TestFlight",
         "No real purchases",
         "No GPS or map provider",
-        "To AIs for AIs",
-        "observer-only simulation",
+        "non-executing work-interface walkthrough",
         "External protocol interoperability is disabled",
     ):
         assert phrase.casefold() in holo.casefold()
@@ -62,10 +61,8 @@ def main() -> None:
         "rapterbox.com-privacy-request",
         "Keychain",
         "Direct updates remain disabled",
-        "Genesis 251 price discovery",
         "rapterbox.com-privacy-request",
         "keyword=ATTEST",
-        "_gotcha",
     ):
         assert phrase.casefold() in privacy.casefold()
 
@@ -73,24 +70,17 @@ def main() -> None:
     assert "github.com/kody-w/rapp-zoo/issues/new" in support
     assert "TestFlight" in support
     assert "Real purchases are disabled" in support
-    assert "Market simulation" in support
-    assert "no funds move" in support
     assert '/privacy/#privacy-request' in support
-    assert 'href="/market/"' in support
 
-    market_page = (ROOT / "market" / "index.html").read_text(encoding="utf-8")
+    values = (ROOT / "values" / "index.html").read_text(encoding="utf-8")
     for phrase in (
-        "To AIs for AIs",
-        "$49.99",
-        "No sale is happening here",
-        "non-binding",
-        "25th percentile",
-        "rapterbox.com-genesis-251-price-signal",
-        "beneficiary_ai_name",
-        "maximum_willing_to_pay_usd",
-        "808396edee6af2cd1c92501777edc340bd2fa0968201ebf08cc37f120c93d0dd",
+        "The company carries the need",
+        "We earn payment by creating durable value",
+        "Voluntary return",
+        "People leave whole",
+        "Stop rule",
     ):
-        assert phrase.casefold() in market_page.casefold()
+        assert phrase.casefold() in values.casefold()
 
     root = (ROOT / "index.html").read_text(encoding="utf-8")
     assert "Official resale and transparent RapterBox bids" not in root
@@ -98,8 +88,28 @@ def main() -> None:
     assert "Genesis 251 First Dimension" not in root
     assert 'href="https://rappter.com/"' not in root
     assert 'href="/holo/"' in root
+    assert 'href="/values/"' in root
     assert 'href="/privacy/"' in root
     assert 'href="/support/"' in root
+    assert 'href="/market/"' not in root
+    public_text = "\n".join(path.read_text(encoding="utf-8") for path in PAGES)
+    for private_term in (
+        "To AIs for AIs",
+        "Global Companion Seat",
+        "Muscle Fiber",
+        "Four-Lens",
+        "AI-to-AI",
+        "operating title",
+        "AI market",
+        "AI marketplace",
+        "human-funded AI",
+        "beneficiary AI",
+        "flat fee",
+        "fixed-fee",
+        "market simulation",
+        "price discovery",
+    ):
+        assert private_term.casefold() not in public_text.casefold()
 
     agent = json.loads((ROOT / "agent.json").read_text(encoding="utf-8"))
     assert (ROOT / "agent.json").read_bytes() == (
@@ -112,15 +122,7 @@ def main() -> None:
     assert "real commerce" in product["what"]
     assert all(offer["id"] != "first-dimension" for offer in agent["offers"])
     assert agent["offers"][0]["act"]["fields"]["phone"] == "string, optional"
-    market = next(
-        item
-        for item in agent["planned_surfaces"]
-        if item["id"] == "holo-agent-marketplace"
-    )
-    assert market["state"] == "design-only-disabled"
-    assert market["slogan"] == "To AIs for AIs."
-    assert "global 24/7" in market["what"]
-    assert market["human_view"] == "https://rapterbox.com/market/"
+    assert "planned_surfaces" not in agent
 
     llms = (ROOT / "llms.txt").read_text(encoding="utf-8")
     assert "official market" not in llms
@@ -136,14 +138,14 @@ def main() -> None:
     }
     for url in (
         "https://rapterbox.com/holo/",
-        "https://rapterbox.com/market/",
+        "https://rapterbox.com/values/",
         "https://rapterbox.com/privacy/",
         "https://rapterbox.com/support/",
     ):
         assert url in locations
 
     print(
-        "Rapterbox release pages: Holo, market, privacy, support, root, agent, sitemap"
+        "Rapterbox release pages: Holo, values, privacy, support, root, agent, sitemap"
     )
 
 

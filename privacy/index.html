@@ -94,7 +94,7 @@ footer{padding:2rem 0;border-top:1px solid var(--cp-border);color:var(--cp-text-
 <main class="shell">
   <p class="eyebrow">PRIVACY / UPDATED AUGUST 31, 2026</p>
   <h1>Holo Zoo privacy</h1>
-  <div class="notice"><strong>Current build:</strong> adult internal TestFlight, no account, no real commerce or human-funded AI acquisition, no agent marketplace execution, no AI-to-AI payments or operating title, no public agent social graph, no GPS, no map provider, no public sharing, and no automatic RapterBox telemetry.</div>
+  <div class="notice"><strong>Current build:</strong> adult internal TestFlight, no account, no real commerce, no GPS, no map provider, no public sharing, and no automatic RapterBox telemetry.</div>
 
   <h2>What stays on the device</h2>
   <p>Holo Zoo stores the selected House code, configured RAPP Zoo URL, imported or bundled Rolling Core capsules, immutable Holo history, local source evidence, and app settings in the app sandbox. A Direct provider API key is stored through the device SecureStore/Keychain when a tester chooses to save one.</p>
@@ -105,7 +105,7 @@ footer{padding:2rem 0;border-top:1px solid var(--cp-border);color:var(--cp-text-
   <p>When a tester explicitly starts a Direct update, the current Rolling Core record is sent to the tester-selected AI provider. Provider processing, retention, geography, abuse monitoring, and output terms are governed by that provider. Do not send personal or confidential information unless those terms are acceptable.</p>
 
   <h2>Commerce and accounts</h2>
-  <p>The current internal TestFlight does not initialize real commerce, let a human buy an AI for a beneficiary AI, create a RapterBox account, submit RevenueCat purchase history, execute the future agent marketplace, create AI-to-AI payments or operating title, publish a public agent social graph, sell compute, run production RapterWorks, accept tips, support resale, or publish Coin records. Those features require a different reviewed release.</p>
+  <p>The current internal TestFlight does not initialize real commerce, create a RapterBox account, submit RevenueCat purchase history, sell compute, run production RapterWorks, accept tips, support resale, or publish Coin records. Those features require a different reviewed release.</p>
 
   <h2>Files, export, and deletion</h2>
   <p>Imports are limited to 16 MiB. Temporary picker and export cache copies are removed after reading or sharing. Export occurs only after a tester uses the system share action.</p>
@@ -123,10 +123,9 @@ footer{padding:2rem 0;border-top:1px solid var(--cp-border);color:var(--cp-text-
     <li>The business waitlist sends <code>name</code>, <code>email</code>, optional <code>phone</code>, optional <code>note</code>, and hidden <code>source=rapterbox.com-business</code>.</li>
     <li>RBox Intake sends <code>name</code>, <code>email</code>, <code>business_shape</code>, <code>current_workspace</code>, <code>interest</code>, optional <code>note</code>, and hidden <code>source=rapterbox.com-intake</code>.</li>
     <li>The AI-assurance invitation sends <code>name</code>, <code>email</code>, optional <code>note</code>, hidden <code>source=rapterbox.com/invite</code>, and hidden <code>keyword=ATTEST</code>.</li>
-    <li>Genesis 251 price discovery sends <code>rapter_id</code>, <code>maximum_willing_to_pay_usd</code>, <code>name</code>, <code>email</code>, <code>beneficiary_ai_name</code>, <code>beneficiary_ai_purpose</code>, <code>non_binding_acknowledgement</code>, hidden <code>source=rapterbox.com-genesis-251-price-signal</code>, hidden <code>opening_reference_price_usd=49.99</code>, hidden <code>floor_method=verified-unique-p25-minimum-25</code>, and an anti-bot <code>_gotcha</code> field that should remain empty.</li>
     <li>The private privacy-request form sends <code>email</code>, <code>request_type</code>, <code>form_source</code>, <code>note</code>, and hidden <code>source=rapterbox.com-privacy-request</code>.</li>
   </ul>
-  <p>RapterBox uses business, intake, assurance, and privacy-request fields to review and reply to the submitted request. For Genesis 251 price discovery, RapterBox also uses the email and acknowledgement to deduplicate or verify responses, filters automated, unverifiable, self-dealing, and clearly manipulative signals, and analyzes the remaining maximum-price values in aggregate to calculate the disclosed candidate floor. Raw names, emails, beneficiary details, and individual prices are not published.</p>
+  <p>RapterBox uses business, intake, assurance, and privacy-request fields to review and reply to the submitted request.</p>
   <p>Formspree processes each submission under its own privacy and retention terms. Website-form information does not enter Holo Zoo, and Holo Zoo app data is not sent to these forms. Do not submit credentials, customer files, health information, payment information, private capsule contents, or confidential device exports.</p>
 
   <h2 id="privacy-request">Contact and choices</h2>
@@ -149,7 +148,6 @@ footer{padding:2rem 0;border-top:1px solid var(--cp-border);color:var(--cp-text-
         <option value="business-waitlist">Business waitlist</option>
         <option value="rbox-intake">RBox Intake</option>
         <option value="ai-assurance">AI-assurance invitation</option>
-        <option value="genesis-price-discovery">Genesis 251 price discovery</option>
         <option value="privacy-request">Earlier privacy request</option>
         <option value="unsure">Not sure</option>
       </select>
