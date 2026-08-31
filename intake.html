@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBox Intake — keep how your old computer worked for you</title>
+<meta name="description" content="RBox Intake finds the useful workflows on an authorized old computer, lets you choose what to migrate, and proves the new RBox beside the old workspace.">
+<meta property="og:title" content="RBox Intake">
+<meta property="og:description" content="Upgrade the machine without throwing away the workspace it earned.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rapterbox.com/intake">
+<link rel="canonical" href="https://rapterbox.com/intake">
+<link rel="alternate" type="application/json" href="https://rapterbox.com/agent.json" title="Agent view">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Service","name":"RBox Intake","provider":{"@type":"Organization","name":"RapterBox LLC","url":"https://rapterbox.com/"},"url":"https://rapterbox.com/intake","description":"Selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care."}
+</script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f7f4ef;--surface:#fff;--soft:#f0ece6;--border:#d7d0c7;--text:#24211e;
+  --muted:#625d56;--accent:#b11f4b;--accent-hover:#95183f;--accent-fg:#fff;
+  --success:#15803d;--shadow:0 18px 48px rgba(49,38,30,.12);
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#2f2d2b;--surface:#242322;--soft:#373431;--border:#514c47;--text:#f0ebe5;
+  --muted:#b9afa5;--accent:#fd8ea1;--accent-hover:#ffafbd;--accent-fg:#21191b;
+  --success:#4ade80;--shadow:0 18px 48px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.62 "Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif}
+a{color:inherit}
+.shell{width:min(76rem,calc(100% - 2.5rem));margin-inline:auto}
+header{min-height:5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border)}
+.brand{font-weight:800;text-decoration:none}
+nav{display:flex;gap:1rem}nav a{color:var(--muted);text-decoration:none}
+.hero{padding-block:clamp(5rem,10vw,8rem)}
+.eyebrow{margin:0 0 1rem;color:var(--accent);font:700 .78rem/1.2 Consolas,"Courier New",monospace;letter-spacing:.14em}
+h1,h2,h3,p{margin-top:0;overflow-wrap:anywhere}
+h1{max-width:14ch;margin-bottom:1.5rem;font-size:clamp(3.1rem,8vw,6.6rem);line-height:.95;letter-spacing:-.065em}
+h2{font-size:clamp(2rem,4vw,3.5rem);line-height:1;letter-spacing:-.045em}
+h3{font-size:1.15rem}
+.lede{max-width:47rem;color:var(--muted);font-size:clamp(1.05rem,2vw,1.35rem)}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;padding:.72rem 1rem;border:1px solid var(--accent);border-radius:.625rem;background:var(--accent);color:var(--accent-fg);font-weight:750;text-decoration:none;cursor:pointer}
+.button:hover{background:var(--accent-hover)}
+.button.secondary{color:var(--text);background:var(--surface);border-color:var(--border)}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
+section{padding-block:4.75rem;border-top:1px solid var(--border)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.card{padding:1.35rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}
+.card p,.steps p{color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;counter-reset:steps}
+.step{padding:1.25rem;border-top:3px solid var(--accent);background:var(--surface);border-radius:0 0 14px 14px}
+.step:before{counter-increment:steps;content:counter(steps);display:grid;place-items:center;width:2rem;height:2rem;margin-bottom:1rem;border-radius:50%;background:var(--accent);color:var(--accent-fg);font-weight:800}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(22rem,.8fr);gap:3rem;align-items:start}
+ul{padding-left:1.2rem;color:var(--muted)}
+form{padding:1.5rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}
+label{display:grid;gap:.4rem;margin-top:1rem;font-size:.88rem;font-weight:700}
+input,select,textarea{width:100%;min-height:2.9rem;padding:.75rem .85rem;border:1px solid var(--border);border-radius:.625rem;background:var(--bg);color:var(--text);font:inherit}
+textarea{min-height:7rem;resize:vertical}
+button{width:100%;margin-top:1rem}
+.fine{color:var(--muted);font-size:.82rem}
+.message{display:none;margin-top:1rem;color:var(--success);font-weight:700}
+.boundary{padding:1.2rem;border-left:4px solid var(--accent);background:var(--soft);border-radius:0 12px 12px 0}
+footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4rem;border-top:1px solid var(--border);color:var(--muted);font-size:.82rem}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:820px){.grid,.steps,.split{grid-template-columns:1fr}nav{display:none}.shell{width:calc(100% - 2rem)}footer{flex-direction:column}}
+</style>
+</head>
+<body>
+<header class="shell">
+  <a class="brand" href="/">R/ RapterBox LLC</a>
+  <nav><a href="#how">How it works</a><a href="#services">Services</a><a href="#request">Request intake</a><a href="/ai">For AI agents</a></nav>
+</header>
+<main>
+  <section class="hero" style="border-top:0"><div class="shell">
+    <p class="eyebrow">RBOX INTAKE / WORKSPACE MIGRATION</p>
+    <h1>Your old computer already knows how you work.</h1>
+    <p class="lede">RBox Intake finds the useful workflows an authorized workspace accumulated, shows you a menu of what is worth carrying forward, rebuilds only what you choose, and proves the new RBox beside the old machine.</p>
+    <div class="actions"><a class="button" href="#request">Request an intake review</a><a class="button secondary" href="/">See all RapterBox products</a></div>
+  </div></section>
+
+  <section id="how"><div class="shell">
+    <p class="eyebrow">KEEP THE WORK / UPGRADE THE MACHINE</p>
+    <div class="steps">
+      <article class="step"><h3>Understand</h3><p>Start with a scoped, local-first look at the authorized workspace. No device upload on this page.</p></article>
+      <article class="step"><h3>Choose</h3><p>Review what was found, what remains unknown, and a menu of workflows you may port, defer, or leave behind.</p></article>
+      <article class="step"><h3>Rebuild</h3><p>Selected workflows are rebuilt in an isolated RBox. Credentials are reconnected separately; they are not copied.</p></article>
+      <article class="step"><h3>Prove</h3><p>Run the old and new workflow side by side. Cut over or roll back each one independently.</p></article>
+    </div>
+  </div></section>
+
+  <section id="services"><div class="shell">
+    <p class="eyebrow">ONE INTAKE / AN RBOX THAT KEEPS LEARNING</p>
+    <h2>Start with migration. Continue with adaptation.</h2>
+    <div class="grid">
+      <article class="card"><h3>RBox Intake Assessment</h3><p>Findings, exclusions, unknowns, and an owner-selectable migration menu for the workspace you authorize.</p></article>
+      <article class="card"><h3>RBox Migration Build</h3><p>Selected workflow ports, isolated implementation, side-by-side verification, cutover, and rollback evidence.</p></article>
+      <article class="card"><h3>Ongoing RBox Care</h3><p>A continuing consulting retainer for context refresh, workflow drift, friction review, new automations, and bounded re-intake cycles.</p></article>
+    </div>
+  </div></section>
+
+  <section><div class="shell split">
+    <div>
+      <p class="eyebrow">BUILT FOR OWNER-OPERATORS</p>
+      <h2>Especially useful when the business lives in one person's head and one worn machine.</h2>
+      <p class="lede">RBox Intake is designed for one-person businesses, consultants, and small operating teams that need to upgrade without starting their working life over.</p>
+      <ul>
+        <li>You choose the source, scope, and workflows.</li>
+        <li>The source device stays read-only during intake.</li>
+        <li>Private records and credentials stay local.</li>
+        <li>Unknowns are stated instead of guessed.</li>
+        <li>No workflow is accepted without a test and rollback path.</li>
+      </ul>
+    </div>
+    <div class="boundary">
+      <strong>This form collects interest, not your workspace.</strong>
+      <p style="margin:.6rem 0 0">Do not send credentials, private files, customer records, or device exports. A person will reply to scope whether an intake is appropriate.</p>
+    </div>
+  </div></section>
+
+  <section id="request"><div class="shell split">
+    <div>
+      <p class="eyebrow">REQUEST AN INTAKE REVIEW</p>
+      <h2>Tell us what you do not want to lose.</h2>
+      <p class="lede">No payment and no device upload. We will review the request and reply with the next safe step.</p>
+    </div>
+    <div>
+      <form id="intake-form" method="POST" action="https://formspree.io/f/mgawgado">
+        <label for="name">Name<input id="name" name="name" autocomplete="name" maxlength="100" required></label>
+        <label for="email">Work email<input id="email" name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label for="business">Business shape
+          <select id="business" name="business_shape" required>
+            <option value="">Choose one</option>
+            <option value="one-person">One-person business</option>
+            <option value="2-10">2-10 people</option>
+            <option value="11-50">11-50 people</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label for="device">Current workspace
+          <select id="device" name="current_workspace" required>
+            <option value="">Choose one</option>
+            <option value="mac">Mac</option>
+            <option value="windows">Windows</option>
+            <option value="mixed">Several or mixed devices</option>
+            <option value="unsure">Not sure</option>
+          </select>
+        </label>
+        <label for="interest">What are you interested in?
+          <select id="interest" name="interest" required>
+            <option value="">Choose one</option>
+            <option value="intake">Initial RBox Intake</option>
+            <option value="migration">Migration build</option>
+            <option value="care">Ongoing RBox Care</option>
+            <option value="unsure">Help me decide</option>
+          </select>
+        </label>
+        <label for="preserve">What should survive the upgrade?
+          <textarea id="preserve" name="note" maxlength="2000" placeholder="Describe the workflows or routines, not credentials or private records."></textarea>
+        </label>
+        <input type="hidden" name="source" value="rapterbox.com-intake">
+        <button class="button" type="submit">Request an intake review</button>
+        <p class="fine">A person replies. No newsletter. No automatic account connection. Never include passwords, tokens, private files, or customer data.</p>
+      </form>
+      <p class="message" id="intake-ok" role="status" aria-live="polite" tabindex="-1">Received. A person will review the request and reply with the next safe step.</p>
+      <p class="message" id="intake-no" role="alert" aria-live="assertive" tabindex="-1">That did not send. Please try again in a moment.</p>
+    </div>
+  </div></section>
+</main>
+<footer class="shell">
+  <span>RapterBox LLC · local-first products built on the open RAPP foundation</span>
+  <span><a href="/">Products</a> · <a href="/ai">For AI agents</a> · <a href="/rapp">Foundation boundary</a></span>
+</footer>
+<script>
+const form=document.getElementById("intake-form"),ok=document.getElementById("intake-ok"),no=document.getElementById("intake-no");
+const params=new URLSearchParams(location.search);
+for(const [param,id] of [["name","name"],["email","email"],["business","business"],["device","device"],["interest","interest"],["preserve","preserve"]]){
+  const value=params.get(param),field=document.getElementById(id);
+  if(value&&field&&value.length<=2000)field.value=value;
+}
+form.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const button=form.querySelector("button");
+  button.disabled=true;button.textContent="Sending…";form.setAttribute("aria-busy","true");no.style.display="none";
+  try{
+    const response=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{Accept:"application/json"}});
+    if(!response.ok)throw new Error("request failed");
+    form.hidden=true;form.removeAttribute("aria-busy");ok.style.display="block";ok.focus();
+  }catch(error){
+    form.removeAttribute("aria-busy");button.disabled=false;button.textContent="Try again";no.style.display="block";no.focus();
+  }
+});
+</script>
+</body>
+</html>

@@ -23,7 +23,8 @@
 {"@context":"https://schema.org","@graph":[
   {"@type":"Organization","@id":"https://rapterbox.com/#org","name":"RapterBox LLC","url":"https://rapterbox.com/"},
   {"@type":"Product","name":"Genesis 251 First Dimension","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rappter.com/"},
-  {"@type":"Product","name":"RapterBox for Business","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/#business"}
+  {"@type":"Product","name":"RapterBox for Business","brand":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/#business"},
+  {"@type":"Service","name":"RBox Intake","provider":{"@id":"https://rapterbox.com/#org"},"url":"https://rapterbox.com/intake","description":"Selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care."}
 ]}
 </script>
 <style>
@@ -118,7 +119,7 @@ footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4r
 <body>
 <header class="shell">
   <a class="brand" href="/">R/ RapterBox LLC</a>
-  <nav><a href="#products">Products</a><a href="#business">For business</a><a href="/rapp">Foundation boundary</a><a href="/agent.json">Agent view</a></nav>
+  <nav><a href="#products">Products</a><a href="/intake">RBox Intake</a><a href="#business">For business</a><a href="/rapp">Foundation boundary</a><a href="/agent.json">Agent view</a></nav>
 </header>
 <main>
   <section class="hero" style="border-top:0"><div class="shell">
@@ -141,9 +142,38 @@ footer{display:flex;justify-content:space-between;gap:2rem;padding-block:2rem 4r
         <h2>RapterBox for Business</h2>
         <p>A local-first twin that does reversible admin work, preserves a verifiable record, and texts the owner only the decisions that remain human.</p>
         <ul><li>7am brief</li><li>Append-only receipts ledger</li><li>Provider-neutral AI</li><li>Local credentials and records</li><li>No autonomous signing, paying, sending, or deletion</li></ul>
-        <div class="actions"><a class="button" href="#business">Join the business waitlist</a><a class="button secondary" href="/ai">Agent handoff</a></div>
+        <div class="actions"><a class="button" href="#business">Join the business waitlist</a><a class="button secondary" href="/intake">Migrate a workspace</a><a class="button secondary" href="/ai">Agent handoff</a></div>
       </article>
     </div>
+  </div></section>
+
+  <section id="intake"><div class="shell business-grid">
+    <div>
+      <p class="eyebrow">RBOX INTAKE / NEW SERVICE</p>
+      <h2>Your old computer already knows how you work.</h2>
+      <p class="lede">RBox Intake finds the useful workflows an authorized workspace accumulated, lets you choose what is worth carrying forward, rebuilds only what you select, and proves the new RBox beside the old machine.</p>
+      <ul>
+        <li>Initial intake and migration menu.</li>
+        <li>Selected workflow migration with rollback.</li>
+        <li>Ongoing RBox Care for context refresh and new automations.</li>
+      </ul>
+      <div class="actions"><a class="button" href="/intake">Request an intake review</a></div>
+    </div>
+    <div class="brief">RBOX INTAKE
+
+FOUND
+• recurring workflows
+• tools and dependencies
+• context gaps and friction
+
+YOU CHOOSE
+• port
+• defer
+• leave behind
+
+WE PROVE
+✓ old and new side by side
+✓ rollback before cutover</div>
   </div></section>
 
   <section><div class="shell">
@@ -200,7 +230,7 @@ QUIETED
 </main>
 <footer class="shell">
   <span>RapterBox LLC · products built on the open RAPP foundation</span>
-  <span><a href="https://rappter.com/">Rappter</a> · <a href="https://kody-w.github.io/holodex/">Holodex</a> · <a href="/rapp">Foundation boundary</a> · <a href="/ai">For AI agents</a></span>
+  <span><a href="https://rappter.com/">Rappter</a> · <a href="/intake">RBox Intake</a> · <a href="https://kody-w.github.io/holodex/">Holodex</a> · <a href="/rapp">Foundation boundary</a> · <a href="/ai">For AI agents</a></span>
 </footer>
 <script src="waitlist-config.js"></script>
 <script>
