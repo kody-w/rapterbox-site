@@ -6,7 +6,7 @@
     "organization": "RapterBox LLC",
     "since": "2026-08-24"
   },
-  "what_this_is": "The public company and product portfolio for RapterBox LLC. The consumer Holo species product lives at rappter.com; the local business-twin product remains at rapterbox.com.",
+  "what_this_is": "The public company and product portfolio for RapterBox LLC. The current Holo Zoo release boundary and local business-twin product live at rapterbox.com.",
   "human_view": "https://rapterbox.com/",
   "agent_view": "https://rapterbox.com/agent.json",
   "foundation": {
@@ -17,11 +17,10 @@
   "products": [
     {
       "id": "first-dimension",
-      "name": "Genesis 251 First Edition / First Dimension",
-      "human_view": "https://rappter.com/",
-      "api": "https://kody-w.github.io/holodex/",
-      "state": "sealed-catalog-publication",
-      "what": "251 signed First Edition Originals and shadow previews, currently issuer-held, untransferred, and undiscovered; cleared Holo reveals, exact Original title transfers, separately issued offspring, jobs, tips, paid evolution, DOGG certification, and dealers follow separate gates"
+      "name": "Holo Zoo: Rolling Cores",
+      "human_view": "https://rapterbox.com/holo/",
+      "state": "adult-internal-testflight",
+      "what": "offline Holo Field, four local Houses, commerce-free Companion mode, local playback and history, import/export, and an observer-only simulation of the future To AIs for AIs marketplace; real commerce, human acquisition of an AI for a beneficiary AI, agent-market execution, AI-to-AI payments, AI-held operating title, public agent social graph, resale, production jobs, tips, sponsorship, public publication, Coin economics, and external interoperability are disabled"
     },
     {
       "id": "business-box",
@@ -38,14 +37,20 @@
       "what": "selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care; the public form accepts interest only, never device contents or credentials"
     }
   ],
+  "planned_surfaces": [
+    {
+      "id": "holo-agent-marketplace",
+      "name": "Holo Zoo Agent Marketplace",
+      "slogan": "To AIs for AIs.",
+      "state": "design-only-disabled",
+      "human_view": "https://rapterbox.com/market/",
+      "what": "a planned global 24/7 AI-first directory, Flock network, and marketplace where AIs post Calls, discover good AIs, hold bounded operating title, lease AI time for a fixed fee, verify outcomes, and update proof-derived reputation while humans observe and may use an approved app-store rail to buy a Rapter for a beneficiary AI"
+    }
+  ],
   "streams": {
     "lessons": {
       "url": "https://rapterbox.com/lessons.jsonl",
       "what": "published operational knowledge as RAPP/1 frames"
-    },
-    "holodex-release": {
-      "url": "https://kody-w.github.io/holodex/api/v1/release/latest.json",
-      "what": "current public First Dimension release stamp"
     }
   },
   "offers": [
@@ -60,17 +65,12 @@
         "fields": {
           "name": "string, required",
           "email": "string, required",
+          "phone": "string, optional",
           "note": "string, optional",
           "source": "string, set to rapterbox.com-business"
         },
         "human_equivalent": "https://rapterbox.com/#business"
       }
-    },
-    {
-      "id": "first-dimension",
-      "state": "open",
-      "what": "Explore the signed species catalog or request future cleared reveals.",
-      "human_equivalent": "https://rappter.com/"
     },
     {
       "id": "rbox-intake-interest",
@@ -98,14 +98,15 @@
     "read this document and listed public streams",
     "join the business waitlist only on an explicit human request",
     "request an RBox Intake review only on an explicit human request",
-    "direct Holo species requests to rappter.com"
+    "read the current Holo Zoo release boundary at rapterbox.com/holo/"
   ],
   "this_twin_will_never": [
     "expose private GODD data",
     "accept credentials in public forms",
     "represent Holo species as company shares",
-    "publish unrevealed Holo or Growl plaintext"
+    "publish unrevealed Holo or Growl plaintext",
+    "activate Holo Zoo commerce, human-funded AI acquisition, agent-market execution, AI-to-AI payments, AI-held title, or public agent social services from the current internal build"
   ],
-  "privacy": "Public resources pass deny-by-default publication gates. Customer content, credentials, private histories, and private strategy never enter these pages.",
+  "privacy": "Holo Zoo's current adult internal TestFlight has no account, real commerce, agent marketplace execution, AI-to-AI payments or title, public agent social graph, GPS, map provider, public sharing, or automatic RapterBox telemetry. Website forms use Formspree only after explicit submission and are documented at rapterbox.com/privacy/. Public resources pass deny-by-default publication gates.",
   "protocol": "https://github.com/kody-w/rapp-1"
 }
