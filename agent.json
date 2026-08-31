@@ -29,6 +29,13 @@
       "human_view": "https://rapterbox.com/#business",
       "state": "waitlist",
       "what": "a local-first business twin that handles bounded reversible admin work and sends one morning brief"
+    },
+    {
+      "id": "rbox-intake",
+      "name": "RBox Intake",
+      "human_view": "https://rapterbox.com/intake",
+      "state": "lead-intake",
+      "what": "selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care; the public form accepts interest only, never device contents or credentials"
     }
   ],
   "streams": {
@@ -64,11 +71,33 @@
       "state": "open",
       "what": "Explore the signed species catalog or request future cleared reveals.",
       "human_equivalent": "https://rappter.com/"
+    },
+    {
+      "id": "rbox-intake-interest",
+      "state": "open",
+      "what": "Request a human review for initial RBox Intake, a migration build, or ongoing RBox Care. Do not submit credentials, files, device exports, or customer data.",
+      "act": {
+        "method": "POST",
+        "url": "https://formspree.io/f/mgawgado",
+        "content_type": "application/json",
+        "fields": {
+          "name": "string, required",
+          "email": "string, required",
+          "business_shape": "one-person | 2-10 | 11-50 | other",
+          "current_workspace": "mac | windows | mixed | unsure",
+          "interest": "intake | migration | care | unsure",
+          "note": "workflow description only, optional",
+          "source": "string, set to rapterbox.com-intake"
+        },
+        "human_equivalent": "https://rapterbox.com/intake"
+      },
+      "consent": "Only submit on behalf of a human who explicitly asked you to. The form is a service lead, not authorization to inspect or upload a device."
     }
   ],
   "capabilities_you_may_use": [
     "read this document and listed public streams",
     "join the business waitlist only on an explicit human request",
+    "request an RBox Intake review only on an explicit human request",
     "direct Holo species requests to rappter.com"
   ],
   "this_twin_will_never": [
