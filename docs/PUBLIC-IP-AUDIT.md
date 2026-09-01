@@ -57,6 +57,11 @@ HTML or sentinel body.
   hashed.
 - Report URLs omit credentials, queries, and fragments. Local search-result and
   fixture paths are not included in reports or input-error messages.
+- A malformed explicit or extracted URL becomes a sanitized `probe-error`
+  record and does not abort classification of the remaining inputs. The
+  malformed URL itself is replaced by a one-way redacted identifier.
+- Invalid UTF-8 in fixture or saved-search JSON follows the same sanitized
+  input-error path as invalid JSON and never echoes input bytes.
 - The tool performs GET-only probes and writes only the two requested local
   report files.
 

@@ -150,6 +150,10 @@ def body_hash(body: bytes) -> str:
     return hashlib.sha256(body).hexdigest()
 
 
+def _redacted_url_source(value: str) -> str:
+    return "redacted-url:" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
 class _SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(
         self,
@@ -285,7 +289,15 @@ def load_fixture(path: Path) -> Mapping[str, Any]:
 
 
 def classify_url(url: str, transport: Any) -> Artifact:
-    safe_source = display_url(validate_public_url(url))
+    try:
+        safe_source = display_url(validate_public_url(url))
+    except AuditInputError:
+        return Artifact(
+            "url",
+            _redacted_url_source(url),
+            "probe-error",
+            detail="invalid-url",
+        )
     try:
         response = transport.fetch(url)
     except (ProbeFailure, AuditInputError) as exc:
@@ -373,21 +385,37 @@ def _body_text(response: Response) -> str:
     return response.body.decode("utf-8", errors="replace")
 
 
-def _find_forbidden_links(text: str, forbidden_urls: Sequence[str]) -> tuple[str, ...]:
+def _find_forbidden_links(
+    text: str, forbidden_urls: Sequence[str]
+) -> tuple[tuple[str, ...], int]:
     decoded = html.unescape(text)
-    extracted = {canonical_url(match.rstrip(".,);]")) for match in URL_PATTERN.findall(decoded)}
+    extracted: set[str] = set()
+    invalid_count = 0
+    for match in URL_PATTERN.findall(decoded):
+        try:
+            extracted.add(canonical_url(match.rstrip(".,);]")))
+        except AuditInputError:
+            invalid_count += 1
     matches: list[str] = []
     for target in forbidden_urls:
         canonical = canonical_url(target)
         if target in decoded or canonical in extracted:
             matches.append(display_url(target))
-    return tuple(sorted(set(matches)))
+    return tuple(sorted(set(matches))), invalid_count
 
 
 def classify_link_document(
     url: str, forbidden_urls: Sequence[str], transport: Any
 ) -> Artifact:
-    safe_source = display_url(validate_public_url(url))
+    try:
+        safe_source = display_url(validate_public_url(url))
+    except AuditInputError:
+        return Artifact(
+            "link-document",
+            _redacted_url_source(url),
+            "probe-error",
+            detail="invalid-url",
+        )
     try:
         response = transport.fetch(url)
     except (ProbeFailure, AuditInputError) as exc:
@@ -405,7 +433,19 @@ def classify_link_document(
             detail="http-error",
         )
     digest = body_hash(response.body)
-    matches = _find_forbidden_links(_body_text(response), forbidden_urls)
+    matches, invalid_count = _find_forbidden_links(
+        _body_text(response), forbidden_urls
+    )
+    if invalid_count:
+        return Artifact(
+            "link-document",
+            safe_source,
+            "probe-error",
+            status=response.status,
+            sha256=digest,
+            detail="malformed-extracted-url",
+            matches=matches,
+        )
     return Artifact(
         "link-document",
         safe_source,
@@ -421,7 +461,7 @@ def _load_json(path: Path) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except OSError as exc:
         raise AuditInputError("unable to read JSON input") from exc
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise AuditInputError("invalid JSON input") from exc
 
 

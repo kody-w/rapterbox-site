@@ -18,12 +18,12 @@ EXPECTED_ACTIONS = {
     "actions/deploy-pages",
     "actions/setup-python",
     "actions/upload-artifact",
-    "actions/upload-pages-artifact",
 }
 DEFAULT_BRANCH_GUARDS = (
     "github.event_name == 'push'",
-    "github.ref_name == github.event.repository.default_branch",
+    "github.ref == format('refs/heads/{0}', github.event.repository.default_branch)",
     "github.ref_protected == true",
+    "github.sha == github.event.after",
 )
 
 
@@ -135,7 +135,7 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         _fail("deploy_commit_unbound")
 
     pins: dict[str, str] = {}
-    action_count = 0
+    action_uses: dict[str, int] = {}
     for job in jobs.values():
         for step in _steps(job):
             if "uses" not in step:
@@ -143,11 +143,20 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
             match = ACTION_PATTERN.fullmatch(str(step["uses"]))
             if not match:
                 _fail("mutable_action")
-            if match.group("name") in pins:
-                _fail("duplicate_action")
-            pins[match.group("name")] = match.group("sha")
-            action_count += 1
-    if set(pins) != EXPECTED_ACTIONS or action_count != len(EXPECTED_ACTIONS):
+            name = match.group("name")
+            sha = match.group("sha")
+            if name in pins and pins[name] != sha:
+                _fail("inconsistent_action_pin")
+            pins[name] = sha
+            action_uses[name] = action_uses.get(name, 0) + 1
+    if (
+        set(pins) != EXPECTED_ACTIONS
+        or action_uses.get("actions/upload-artifact") != 2
+        or any(
+            action_uses.get(name) != 1
+            for name in EXPECTED_ACTIONS - {"actions/upload-artifact"}
+        )
+    ):
         _fail("action_set_invalid")
 
     steps = _steps(gate)
@@ -157,12 +166,14 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         "Set up deterministic Python",
         "Verify checked commit and runtime",
         "Scan classified publication source",
+        "Validate source evidence against Git objects",
         "Verify release claims and metadata",
         "Run publication gate tests",
-        "Build and scan exact Pages artifact",
-        "Validate generated artifact evidence",
+        "Build, scan, and seal exact Pages payload",
+        "Validate generated artifact and payload evidence",
         "Bind gated commit",
         "Upload private publication evidence",
+        "Final verify immutable Pages payload",
         "Upload exact Pages artifact",
     ]
     try:
@@ -171,6 +182,14 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         _fail("required_step_missing")
     if indices != sorted(indices):
         _fail("gate_order_invalid")
+    if names.index("Validate source evidence against Git objects") != names.index(
+        "Scan classified publication source"
+    ) + 1:
+        _fail("source_evidence_not_immediate")
+    if names.index(
+        "Validate generated artifact and payload evidence"
+    ) != names.index("Build, scan, and seal exact Pages payload") + 1:
+        _fail("artifact_evidence_not_immediate")
 
     checkout = _step_by_name(steps, "Check out exact commit")
     checkout_with = checkout.get("with")
@@ -197,23 +216,44 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     ):
         if fragment not in source_scan:
             _fail("source_scan_wiring")
+    source_validation = str(
+        _step_by_name(steps, "Validate source evidence against Git objects").get(
+            "run", ""
+        )
+    )
+    for fragment in (
+        "validate_publication_evidence.py source",
+        '--manifest PUBLICATION-SOURCE-MANIFEST.json',
+        '--evidence "$SOURCE_EVIDENCE"',
+        '--expected-commit "$GITHUB_SHA"',
+    ):
+        if fragment not in source_validation:
+            _fail("source_evidence_unbound")
 
-    build_scan = str(_step_by_name(steps, "Build and scan exact Pages artifact").get("run", ""))
+    build_scan = str(
+        _step_by_name(steps, "Build, scan, and seal exact Pages payload").get(
+            "run", ""
+        )
+    )
     for fragment in (
         "scripts/publication_artifact.py",
         "build-scan",
         '--source .',
-        '--artifact "$PAGES_ARTIFACT"',
+        '--artifact "$PAGES_STAGE"',
+        '--payload "$PAGES_PAYLOAD"',
         '--evidence "$PUBLICATION_EVIDENCE"',
     ):
         if fragment not in build_scan:
             _fail("artifact_build_wiring")
     validate_evidence = str(
-        _step_by_name(steps, "Validate generated artifact evidence").get("run", "")
+        _step_by_name(
+            steps, "Validate generated artifact and payload evidence"
+        ).get("run", "")
     )
     for fragment in (
         "validate_publication_evidence.py artifact",
-        '--artifact "$PAGES_ARTIFACT"',
+        '--artifact "$PAGES_STAGE"',
+        '--payload "$PAGES_PAYLOAD"',
         '--evidence "$PUBLICATION_EVIDENCE"',
         '--expected-commit "$GITHUB_SHA"',
     ):
@@ -223,15 +263,27 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     env = document.get("env")
     if not isinstance(env, Mapping):
         _fail("paths_missing")
-    pages_path = env.get("PAGES_ARTIFACT")
+    pages_stage = env.get("PAGES_STAGE")
+    pages_path = env.get("PAGES_PAYLOAD")
     evidence_path = env.get("PUBLICATION_EVIDENCE")
     source_evidence_path = env.get("SOURCE_EVIDENCE")
-    if not all(isinstance(path, str) for path in (pages_path, evidence_path, source_evidence_path)):
+    if not all(
+        isinstance(path, str)
+        for path in (pages_stage, pages_path, evidence_path, source_evidence_path)
+    ):
         _fail("paths_missing")
     pages_resolved = _expanded_runner_path(pages_path)
+    stage_resolved = _expanded_runner_path(pages_stage)
+    if pages_resolved.name != "artifact.tar" or stage_resolved == pages_resolved:
+        _fail("pages_payload_path_invalid")
     for value in (evidence_path, source_evidence_path):
         resolved = _expanded_runner_path(value)
-        if resolved == pages_resolved or pages_resolved in resolved.parents:
+        if (
+            resolved == pages_resolved
+            or pages_resolved in resolved.parents
+            or resolved == stage_resolved
+            or stage_resolved in resolved.parents
+        ):
             _fail("artifact_evidence_overlap")
 
     evidence_upload = _step_by_name(steps, "Upload private publication evidence")
@@ -239,7 +291,8 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     if (
         not isinstance(evidence_with, Mapping)
         or evidence_with.get("name") != "publication-evidence-${{ github.sha }}"
-        or evidence_with.get("path") != "${{ env.PUBLICATION_EVIDENCE }}"
+        or evidence_with.get("path")
+        != "${{ env.SOURCE_EVIDENCE }}\n${{ env.PUBLICATION_EVIDENCE }}"
         or evidence_with.get("if-no-files-found") != "error"
         or evidence_with.get("include-hidden-files") != "false"
         or evidence_with.get("overwrite") != "false"
@@ -253,15 +306,42 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     pages_if = str(pages_upload.get("if", ""))
     if (
         not isinstance(pages_with, Mapping)
-        or pages_with.get("path") != "${{ env.PAGES_ARTIFACT }}"
+        or pages_with.get("path") != "${{ env.PAGES_PAYLOAD }}"
         or pages_with.get("name") != "github-pages-${{ github.sha }}"
         or pages_with.get("retention-days") != 1
-        or pages_with.get("include-hidden-files") != "true"
+        or pages_with.get("include-hidden-files") != "false"
+        or pages_with.get("compression-level") != 0
+        or pages_with.get("if-no-files-found") != "error"
+        or pages_with.get("overwrite") != "false"
         or not all(guard in pages_if for guard in DEFAULT_BRANCH_GUARDS)
     ):
         _fail("pages_upload_invalid")
     if str(pages_with.get("path", "")).strip() in {".", "./", "${{ github.workspace }}"}:
         _fail("root_upload_forbidden")
+    final_verify = _step_by_name(steps, "Final verify immutable Pages payload")
+    final_if = str(final_verify.get("if", ""))
+    if not all(guard in final_if for guard in DEFAULT_BRANCH_GUARDS):
+        _fail("final_payload_branch_guard")
+    final_run = str(final_verify.get("run", ""))
+    for fragment in (
+        'rm -rf -- "$PAGES_STAGE"',
+        'test ! -e "$PAGES_STAGE"',
+        "git diff --quiet HEAD -- .",
+        "git diff --cached --quiet HEAD -- .",
+        'git status --porcelain=v1 --untracked-files=all',
+        "validate_publication_evidence.py artifact",
+        '--payload "$PAGES_PAYLOAD"',
+        '--evidence "$PUBLICATION_EVIDENCE"',
+        '--expected-commit "$GITHUB_SHA"',
+    ):
+        if fragment not in final_run:
+            _fail("final_payload_verification_invalid")
+    if "--artifact" in final_run:
+        _fail("final_payload_verification_mutable")
+    if names.index("Upload exact Pages artifact") != names.index(
+        "Final verify immutable Pages payload"
+    ) + 1:
+        _fail("untrusted_step_after_final_verification")
 
     outputs = gate.get("outputs")
     if (

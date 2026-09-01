@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -150,6 +151,13 @@ class PublicationArtifactTests(unittest.TestCase):
         categories = {
             record["path"]: record["category"] for record in report["coverage_records"]
         }
+        self.assertTrue(
+            all(
+                len(record["git_blob_id"]) == 40
+                and record["git_mode"] in {"100644", "100755"}
+                for record in report["coverage_records"]
+            )
+        )
         self.assertEqual(["product-summary"], categories["holo/index.html"])
         self.assertEqual(
             ["customer-facing-terms", "product-summary"],
@@ -421,6 +429,56 @@ class PublicationArtifactTests(unittest.TestCase):
         for value in values.values():
             self.assertNotIn(value, serialized)
 
+    def test_generated_structured_sensitive_keys_and_nested_customer_data_are_denied(
+        self,
+    ) -> None:
+        source = self.fixture_source(
+            paths=[("agent.json", "site-content")],
+            contents={"agent.json": "{}\n"},
+        )
+        artifact = self.build(source)
+        sensitive = {
+            "pass%77ord": "short-real-value",
+            "nested": {
+                "api&#95;key": "another-real-value",
+                "customer": {
+                    "phones": ["2125550199"],
+                    "address": {"street": "123 Main Street"},
+                    "accountId": "acct-real-123",
+                },
+            },
+        }
+        (artifact / "agent.json").write_text(
+            json.dumps(sensitive), encoding="utf-8"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        detectors = {
+            finding["detector"]
+            for finding in report["findings"]
+            if finding["rule"] == "structured_data_violation"
+        }
+        self.assertTrue(
+            {
+                "passwords",
+                "api_tokens",
+                "phone_number_values",
+                "postal_address_values",
+                "customer_or_account_identifiers",
+            }
+            <= detectors
+        )
+        serialized = json.dumps(report)
+        for value in (
+            "short-real-value",
+            "another-real-value",
+            "2125550199",
+            "123 Main Street",
+            "acct-real-123",
+        ):
+            self.assertNotIn(value, serialized)
+
     def test_generated_binary_extra_still_receives_real_secret_checks(self) -> None:
         source = self.fixture_source()
         artifact = self.build(source)
@@ -441,9 +499,10 @@ class PublicationArtifactTests(unittest.TestCase):
         )
         (source / "escape.html").symlink_to(outside)
         self.git(source, "add", "escape.html")
+        self.commit_source(source)
 
         with self.assertRaisesRegex(
-            publication_artifact.ArtifactError, "source_symlink"
+            publication_artifact.ArtifactError, "unsupported_git_entry"
         ):
             publication_artifact.build_artifact(source, self.work / "artifact")
 
@@ -531,6 +590,7 @@ class PublicationArtifactTests(unittest.TestCase):
             publication_artifact.build_artifact(source, self.work / "artifact")
 
         self.git(source, "add", "untracked.html")
+        self.commit_source(source)
         (source / "untracked.html").unlink()
         with self.assertRaisesRegex(
             publication_artifact.ArtifactError, "source_path_unreadable"
@@ -616,6 +676,53 @@ class PublicationArtifactTests(unittest.TestCase):
         ):
             publication_artifact.build_artifact(source, existing)
 
+    def test_builder_rejects_dirty_declared_worktree_file(self) -> None:
+        source = self.fixture_source()
+        (source / "index.html").write_text(
+            "<!doctype html><title>Dirty</title>\n", encoding="utf-8"
+        )
+
+        with self.assertRaisesRegex(
+            publication_artifact.ArtifactError, "worktree_diverges_from_commit"
+        ):
+            publication_artifact.build_artifact(source, self.work / "artifact")
+
+    def test_post_scan_staging_mutation_prevents_payload_seal(self) -> None:
+        source = self.fixture_source()
+        artifact = self.work / "artifact"
+        payload_dir = self.work / "payload"
+        payload_dir.mkdir()
+        payload = payload_dir / "artifact.tar"
+
+        def mutate(stage: Path) -> None:
+            (stage / "index.html").write_text("post-scan mutation\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            publication_artifact.ArtifactError, "artifact_changed_after_scan"
+        ):
+            publication_artifact.build_scan_seal(
+                source,
+                artifact,
+                payload,
+                _post_scan_hook=mutate,
+            )
+        self.assertFalse(payload.exists())
+
+    def test_pages_payload_tar_is_byte_deterministic(self) -> None:
+        source = self.fixture_source()
+        payloads = []
+        for index in (1, 2):
+            payload_dir = self.work / f"payload-{index}"
+            payload_dir.mkdir()
+            payload = payload_dir / "artifact.tar"
+            report = publication_artifact.build_scan_seal(
+                source, self.work / f"artifact-{index}", payload
+            )
+            self.assertEqual("pass", report["result"])
+            payloads.append(payload.read_bytes())
+
+        self.assertEqual(payloads[0], payloads[1])
+
     def test_invalid_generated_json_fails_closed(self) -> None:
         source = self.fixture_source(
             paths=[("agent.json", "site-content")],
@@ -685,6 +792,7 @@ class PublicationArtifactTests(unittest.TestCase):
             {"id": "invalid", "regex": "("}
         )
         policy_path.write_text(json.dumps(policy), encoding="utf-8")
+        self.commit_source(source)
 
         with self.assertRaisesRegex(
             publication_artifact.ArtifactError, "policy_invalid"
@@ -708,6 +816,9 @@ class PublicationArtifactTests(unittest.TestCase):
     def test_build_scan_cli_writes_private_safe_evidence_outside_artifact(self) -> None:
         source = self.fixture_source()
         artifact = self.work / "cli-artifact"
+        payload_dir = self.work / "payload"
+        payload_dir.mkdir()
+        payload = payload_dir / "artifact.tar"
         evidence = self.work / "evidence.json"
         command = [
             sys.executable,
@@ -718,6 +829,8 @@ class PublicationArtifactTests(unittest.TestCase):
             os.fspath(source),
             "--artifact",
             os.fspath(artifact),
+            "--payload",
+            os.fspath(payload),
             "--evidence",
             os.fspath(evidence),
         ]
@@ -729,6 +842,10 @@ class PublicationArtifactTests(unittest.TestCase):
         self.assertEqual("", result.stderr)
         report = json.loads(evidence.read_text(encoding="utf-8"))
         self.assertEqual("pass", report["result"])
+        self.assertEqual(
+            hashlib.sha256(payload.read_bytes()).hexdigest(),
+            report["payload_sha256"],
+        )
         self.assertFalse((artifact / evidence.name).exists())
 
 

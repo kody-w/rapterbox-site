@@ -39,7 +39,6 @@ class PublicationWorkflowTests(unittest.TestCase):
                 "actions/deploy-pages",
                 "actions/setup-python",
                 "actions/upload-artifact",
-                "actions/upload-pages-artifact",
             },
             set(pins),
         )
@@ -59,7 +58,7 @@ class PublicationWorkflowTests(unittest.TestCase):
         mutations.append(credentials)
 
         continued = copy.deepcopy(self.document())
-        self.named_step(continued, "Build and scan exact Pages artifact")[
+        self.named_step(continued, "Build, scan, and seal exact Pages payload")[
             "continue-on-error"
         ] = True
         mutations.append(continued)
@@ -104,18 +103,22 @@ class PublicationWorkflowTests(unittest.TestCase):
 
     def test_rejects_unbound_evidence_and_path_overlap(self) -> None:
         unbound = copy.deepcopy(self.document())
-        evidence_step = self.named_step(unbound, "Validate generated artifact evidence")
+        evidence_step = self.named_step(
+            unbound, "Validate generated artifact and payload evidence"
+        )
         evidence_step["run"] = evidence_step["run"].replace(
             ' --expected-commit "$GITHUB_SHA"', ""
         )
 
         overlap = copy.deepcopy(self.document())
-        overlap["env"]["PUBLICATION_EVIDENCE"] = (
-            overlap["env"]["PAGES_ARTIFACT"] + "/evidence.json"
+        overlap["env"]["PUBLICATION_EVIDENCE"] = overlap["env"]["PAGES_STAGE"] + (
+            "/evidence.json"
         )
 
         source_overlap = copy.deepcopy(self.document())
-        source_overlap["env"]["SOURCE_EVIDENCE"] = source_overlap["env"]["PAGES_ARTIFACT"]
+        source_overlap["env"]["SOURCE_EVIDENCE"] = source_overlap["env"][
+            "PAGES_PAYLOAD"
+        ]
 
         wrong_artifact = copy.deepcopy(self.document())
         wrong_artifact["jobs"]["deploy"]["steps"][0]["with"]["artifact_name"] = (
@@ -125,6 +128,20 @@ class PublicationWorkflowTests(unittest.TestCase):
         for document in (unbound, overlap, source_overlap, wrong_artifact):
             with self.subTest():
                 self.assert_rejected(document)
+
+    def test_rejects_mutable_step_between_final_payload_verification_and_upload(
+        self,
+    ) -> None:
+        document = copy.deepcopy(self.document())
+        steps = self.gate_steps(document)
+        upload_index = next(
+            index
+            for index, step in enumerate(steps)
+            if step["name"] == "Upload exact Pages artifact"
+        )
+        steps.insert(upload_index, {"name": "Mutable substitution", "run": "true"})
+
+        self.assert_rejected(document)
 
 
 if __name__ == "__main__":

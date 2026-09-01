@@ -20,7 +20,8 @@
       "id": "pages-build-source",
       "state": "needs-operator-apply",
       "current": "legacy-branch",
-      "desired": "github-actions"
+      "desired": "github-actions",
+      "release_payload": "validated deterministic artifact.tar"
     },
     {
       "id": "protect-main",
@@ -43,6 +44,8 @@
   ],
   "history_rewrite": {
     "state": "blocked",
-    "requires": "explicit-destructive-confirmation"
+    "reason": "forbidden historical bytes remain reachable from public Git history",
+    "requires": "explicit-destructive-confirmation",
+    "current_tree_or_deployment_exception": false
   }
 }
