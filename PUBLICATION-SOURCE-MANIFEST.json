@@ -1,0 +1,143 @@
+{
+  "artifact_boundary": "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts",
+  "default_disposition": "deny",
+  "document_type": "publication-source-manifest",
+  "files": [
+    ".github/workflows/release-pages.yml",
+    ".gitignore",
+    ".nojekyll",
+    ".well-known/agent.json",
+    "agent.json",
+    "ai.html",
+    "CNAME",
+    "docs/PUBLIC-IP-AUDIT.md",
+    "docs/PUBLICATION-BOUNDARY.md",
+    "dogg.html",
+    "frames/0.json",
+    "frames/1.json",
+    "frames/2.json",
+    "frames/3.json",
+    "frames/4.json",
+    "frames/5.json",
+    "frames/HEAD.json",
+    "holo/index.html",
+    "index.html",
+    "intake.html",
+    "invite.html",
+    "lessons.jsonl",
+    "llms.txt",
+    "privacy/index.html",
+    "PUBLICATION-MANIFEST.json",
+    "PUBLICATION-POLICY.json",
+    "PUBLICATION-SOURCE-MANIFEST.json",
+    "rapp.html",
+    "release-pages-selftest.py",
+    "robots.txt",
+    "scripts/audit_public_ip.py",
+    "scripts/publication_artifact.py",
+    "scripts/publication_guard.py",
+    "scripts/validate_publication_evidence.py",
+    "scripts/validate_publication_workflow.py",
+    "silent-failures.html",
+    "sitemap.xml",
+    "support/index.html",
+    "tests/test_audit_public_ip.py",
+    "tests/test_publication_artifact.py",
+    "tests/test_publication_ci.py",
+    "tests/test_publication_evidence.py",
+    "tests/test_publication_guard_source.py",
+    "tiers.json",
+    "values/index.html",
+    "waitlist-config.js",
+    "waitlist/Code.gs",
+    "waitlist/com.wildhaven.waitlist-texter.plist",
+    "waitlist/README.md",
+    "waitlist/texter.py",
+    "wrong-game.html"
+  ],
+  "repository": "kody-w/rapterbox-site",
+  "schema_version": 1,
+  "source_classes": [
+    {
+      "class": "nonpublication-operations",
+      "paths": [
+        "waitlist/Code.gs",
+        "waitlist/com.wildhaven.waitlist-texter.plist",
+        "waitlist/README.md",
+        "waitlist/texter.py"
+      ],
+      "scanner": "scripts/publication_guard.py"
+    },
+    {
+      "class": "publication-candidate",
+      "paths": [
+        ".nojekyll",
+        ".well-known/agent.json",
+        "agent.json",
+        "ai.html",
+        "CNAME",
+        "dogg.html",
+        "frames/0.json",
+        "frames/1.json",
+        "frames/2.json",
+        "frames/3.json",
+        "frames/4.json",
+        "frames/5.json",
+        "frames/HEAD.json",
+        "holo/index.html",
+        "index.html",
+        "intake.html",
+        "invite.html",
+        "lessons.jsonl",
+        "llms.txt",
+        "privacy/index.html",
+        "rapp.html",
+        "robots.txt",
+        "silent-failures.html",
+        "sitemap.xml",
+        "support/index.html",
+        "tiers.json",
+        "values/index.html",
+        "waitlist-config.js",
+        "wrong-game.html"
+      ],
+      "scanner": "scripts/publication_guard.py"
+    },
+    {
+      "class": "publication-control",
+      "paths": [
+        "docs/PUBLICATION-BOUNDARY.md",
+        "PUBLICATION-POLICY.json"
+      ],
+      "scanner": "scripts/publication_artifact.py"
+    },
+    {
+      "class": "publication-inventory",
+      "paths": [
+        "PUBLICATION-MANIFEST.json",
+        "PUBLICATION-SOURCE-MANIFEST.json"
+      ],
+      "scanner": "scripts/publication_guard.py"
+    },
+    {
+      "class": "publication-tooling",
+      "paths": [
+        ".github/workflows/release-pages.yml",
+        ".gitignore",
+        "docs/PUBLIC-IP-AUDIT.md",
+        "release-pages-selftest.py",
+        "scripts/audit_public_ip.py",
+        "scripts/publication_artifact.py",
+        "scripts/publication_guard.py",
+        "scripts/validate_publication_evidence.py",
+        "scripts/validate_publication_workflow.py",
+        "tests/test_audit_public_ip.py",
+        "tests/test_publication_artifact.py",
+        "tests/test_publication_ci.py",
+        "tests/test_publication_evidence.py",
+        "tests/test_publication_guard_source.py"
+      ],
+      "scanner": "scripts/publication_guard.py"
+    }
+  ]
+}
