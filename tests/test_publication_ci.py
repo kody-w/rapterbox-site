@@ -39,6 +39,7 @@ class PublicationWorkflowTests(unittest.TestCase):
                 "actions/deploy-pages",
                 "actions/setup-python",
                 "actions/upload-artifact",
+                "actions/upload-pages-artifact",
             },
             set(pins),
         )
@@ -105,6 +106,11 @@ class PublicationWorkflowTests(unittest.TestCase):
         root_upload = copy.deepcopy(self.document())
         self.named_step(root_upload, "Upload exact Pages artifact")["with"]["path"] = "."
 
+        generic_upload = copy.deepcopy(self.document())
+        self.named_step(generic_upload, "Upload exact Pages artifact")["uses"] = (
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+        )
+
         pr_deploy = copy.deepcopy(self.document())
         pr_deploy["jobs"]["deploy"]["if"] = "${{ needs.gate.outputs.checked_commit == github.sha }}"
 
@@ -114,7 +120,13 @@ class PublicationWorkflowTests(unittest.TestCase):
         always_deploy = copy.deepcopy(self.document())
         always_deploy["jobs"]["deploy"]["if"] = "${{ always() }}"
 
-        for document in (root_upload, pr_deploy, skipped_dependency, always_deploy):
+        for document in (
+            root_upload,
+            generic_upload,
+            pr_deploy,
+            skipped_dependency,
+            always_deploy,
+        ):
             with self.subTest():
                 self.assert_rejected(document)
 

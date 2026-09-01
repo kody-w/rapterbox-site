@@ -18,6 +18,7 @@ EXPECTED_ACTIONS = {
     "actions/deploy-pages",
     "actions/setup-python",
     "actions/upload-artifact",
+    "actions/upload-pages-artifact",
 }
 DEFAULT_BRANCH_GUARDS = (
     "github.event_name == 'push'",
@@ -181,7 +182,7 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
             action_uses[name] = action_uses.get(name, 0) + 1
     if (
         set(pins) != EXPECTED_ACTIONS
-        or action_uses.get("actions/upload-artifact") != 2
+        or action_uses.get("actions/upload-artifact") != 1
         or any(
             action_uses.get(name) != 1
             for name in EXPECTED_ACTIONS - {"actions/upload-artifact"}
@@ -340,13 +341,10 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     pages_if = str(pages_upload.get("if", ""))
     if (
         not isinstance(pages_with, Mapping)
-        or pages_with.get("path") != "${{ env.PAGES_PAYLOAD }}"
+        or pages_with.get("path") != "${{ env.PAGES_STAGE }}"
         or pages_with.get("name") != "github-pages-${{ github.sha }}"
         or pages_with.get("retention-days") != 1
-        or pages_with.get("include-hidden-files") != "false"
-        or pages_with.get("compression-level") != 0
-        or pages_with.get("if-no-files-found") != "error"
-        or pages_with.get("overwrite") != "false"
+        or pages_with.get("include-hidden-files") != "true"
         or not all(guard in pages_if for guard in DEFAULT_BRANCH_GUARDS)
     ):
         _fail("pages_upload_invalid")
@@ -358,20 +356,18 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         _fail("final_payload_branch_guard")
     final_run = str(final_verify.get("run", ""))
     for fragment in (
-        'rm -rf -- "$PAGES_STAGE"',
-        'test ! -e "$PAGES_STAGE"',
+        'test -d "$PAGES_STAGE"',
         "git diff --quiet HEAD -- .",
         "git diff --cached --quiet HEAD -- .",
         'git status --porcelain=v1 --untracked-files=all',
         "validate_publication_evidence.py artifact",
+        '--artifact "$PAGES_STAGE"',
         '--payload "$PAGES_PAYLOAD"',
         '--evidence "$PUBLICATION_EVIDENCE"',
         '--expected-commit "$GITHUB_SHA"',
     ):
         if fragment not in final_run:
             _fail("final_payload_verification_invalid")
-    if "--artifact" in final_run:
-        _fail("final_payload_verification_mutable")
     if names.index("Upload exact Pages artifact") != names.index(
         "Final verify immutable Pages payload"
     ) + 1:
