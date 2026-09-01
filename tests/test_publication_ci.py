@@ -81,7 +81,14 @@ class PublicationWorkflowTests(unittest.TestCase):
         stale_group["concurrency"]["group"] = "publication-pages"
 
         workflow_env = copy.deepcopy(self.document())
-        workflow_env["env"] = workflow_env["jobs"]["gate"].pop("env")
+        workflow_env["env"] = {
+            "PAGES_STAGE": "${{ runner.temp }}/publication-stage"
+        }
+
+        job_env = copy.deepcopy(self.document())
+        job_env["jobs"]["gate"]["env"] = {
+            "PAGES_STAGE": "${{ runner.temp }}/publication-stage"
+        }
 
         for document in (
             permissions,
@@ -89,6 +96,7 @@ class PublicationWorkflowTests(unittest.TestCase):
             concurrency,
             stale_group,
             workflow_env,
+            job_env,
         ):
             with self.subTest():
                 self.assert_rejected(document)
@@ -120,12 +128,22 @@ class PublicationWorkflowTests(unittest.TestCase):
         )
 
         overlap = copy.deepcopy(self.document())
-        gate_env = overlap["jobs"]["gate"]["env"]
-        gate_env["PUBLICATION_EVIDENCE"] = gate_env["PAGES_STAGE"] + "/evidence.json"
+        overlap_initializer = self.named_step(
+            overlap, "Initialize isolated publication paths"
+        )
+        overlap_initializer["run"] = overlap_initializer["run"].replace(
+            "$RUNNER_TEMP/publication-artifact-evidence-",
+            "$RUNNER_TEMP/rapterbox-pages-stage-",
+        )
 
         source_overlap = copy.deepcopy(self.document())
-        source_gate_env = source_overlap["jobs"]["gate"]["env"]
-        source_gate_env["SOURCE_EVIDENCE"] = source_gate_env["PAGES_PAYLOAD"]
+        source_initializer = self.named_step(
+            source_overlap, "Initialize isolated publication paths"
+        )
+        source_initializer["run"] = source_initializer["run"].replace(
+            "$RUNNER_TEMP/publication-source-evidence-",
+            "$RUNNER_TEMP/rapterbox-pages-payload-",
+        )
 
         wrong_artifact = copy.deepcopy(self.document())
         wrong_artifact["jobs"]["deploy"]["steps"][0]["with"]["artifact_name"] = (

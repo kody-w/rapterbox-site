@@ -25,12 +25,6 @@
         "checked_commit": "${{ steps.bind.outputs.checked_commit }}",
         "pages_artifact_name": "${{ steps.bind.outputs.pages_artifact_name }}"
       },
-      "env": {
-        "PAGES_STAGE": "${{ runner.temp }}/rapterbox-pages-stage-${{ github.run_id }}-${{ github.run_attempt }}",
-        "PAGES_PAYLOAD": "${{ runner.temp }}/rapterbox-pages-payload-${{ github.run_id }}-${{ github.run_attempt }}/artifact.tar",
-        "PUBLICATION_EVIDENCE": "${{ runner.temp }}/publication-artifact-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json",
-        "SOURCE_EVIDENCE": "${{ runner.temp }}/publication-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json"
-      },
       "steps": [
         {
           "name": "Check out exact commit",
@@ -55,6 +49,10 @@
         {
           "name": "Verify checked commit and runtime",
           "run": "set -euo pipefail\ntest \"$(git rev-parse HEAD)\" = \"$GITHUB_SHA\"\npython - <<'PY'\nimport sys\nassert sys.version_info[:3] == (3, 12, 11), sys.version\nPY"
+        },
+        {
+          "name": "Initialize isolated publication paths",
+          "run": "set -euo pipefail\numask 077\ntest -n \"$RUNNER_TEMP\"\ntest -n \"$GITHUB_RUN_ID\"\ntest -n \"$GITHUB_RUN_ATTEMPT\"\nprintf 'PAGES_STAGE=%s\\n' \"$RUNNER_TEMP/rapterbox-pages-stage-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\" >> \"$GITHUB_ENV\"\nprintf 'PAGES_PAYLOAD=%s\\n' \"$RUNNER_TEMP/rapterbox-pages-payload-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/artifact.tar\" >> \"$GITHUB_ENV\"\nprintf 'PUBLICATION_EVIDENCE=%s\\n' \"$RUNNER_TEMP/publication-artifact-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json\" >> \"$GITHUB_ENV\"\nprintf 'SOURCE_EVIDENCE=%s\\n' \"$RUNNER_TEMP/publication-source-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json\" >> \"$GITHUB_ENV\""
         },
         {
           "name": "Scan classified publication source",

@@ -25,6 +25,33 @@ DEFAULT_BRANCH_GUARDS = (
     "github.ref_protected == true",
     "github.sha == github.event.after",
 )
+EXPECTED_RUNNER_PATHS = {
+    "PAGES_STAGE": (
+        "$RUNNER_TEMP/rapterbox-pages-stage-"
+        "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+    ),
+    "PAGES_PAYLOAD": (
+        "$RUNNER_TEMP/rapterbox-pages-payload-"
+        "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/artifact.tar"
+    ),
+    "PUBLICATION_EVIDENCE": (
+        "$RUNNER_TEMP/publication-artifact-evidence-"
+        "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+    ),
+    "SOURCE_EVIDENCE": (
+        "$RUNNER_TEMP/publication-source-evidence-"
+        "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+    ),
+}
+EXPECTED_PATH_INITIALIZER = '''set -euo pipefail
+umask 077
+test -n "$RUNNER_TEMP"
+test -n "$GITHUB_RUN_ID"
+test -n "$GITHUB_RUN_ATTEMPT"
+printf 'PAGES_STAGE=%s\\n' "$RUNNER_TEMP/rapterbox-pages-stage-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+printf 'PAGES_PAYLOAD=%s\\n' "$RUNNER_TEMP/rapterbox-pages-payload-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/artifact.tar" >> "$GITHUB_ENV"
+printf 'PUBLICATION_EVIDENCE=%s\\n' "$RUNNER_TEMP/publication-artifact-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json" >> "$GITHUB_ENV"
+printf 'SOURCE_EVIDENCE=%s\\n' "$RUNNER_TEMP/publication-source-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json" >> "$GITHUB_ENV"'''
 
 
 class WorkflowError(Exception):
@@ -76,10 +103,9 @@ def _contains_key(value: Any, key: str) -> bool:
 
 def _expanded_runner_path(value: str) -> PurePosixPath:
     replacements = {
-        "${{ runner.temp }}": "/runner-temp",
-        "${{ github.run_id }}": "1",
-        "${{ github.run_attempt }}": "1",
-        "${{ github.sha }}": "a" * 40,
+        "$RUNNER_TEMP": "/runner-temp",
+        "$GITHUB_RUN_ID": "1",
+        "$GITHUB_RUN_ATTEMPT": "1",
     }
     for source, replacement in replacements.items():
         value = value.replace(source, replacement)
@@ -113,6 +139,8 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
     deploy = jobs["deploy"]
     if not isinstance(gate, Mapping) or not isinstance(deploy, Mapping):
         _fail("jobs_invalid")
+    if "env" in gate:
+        _fail("job_level_runner_context")
     for job in (gate, deploy):
         timeout = job.get("timeout-minutes")
         if isinstance(timeout, bool) or not isinstance(timeout, int) or not 1 <= timeout <= 20:
@@ -167,6 +195,7 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         "Check out exact commit",
         "Set up deterministic Python",
         "Verify checked commit and runtime",
+        "Initialize isolated publication paths",
         "Scan classified publication source",
         "Validate source evidence against Git objects",
         "Verify release claims and metadata",
@@ -184,6 +213,11 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         _fail("required_step_missing")
     if indices != sorted(indices):
         _fail("gate_order_invalid")
+    path_initializer = str(
+        _step_by_name(steps, "Initialize isolated publication paths").get("run", "")
+    )
+    if path_initializer != EXPECTED_PATH_INITIALIZER:
+        _fail("runner_path_initialization_invalid")
     if names.index("Validate source evidence against Git objects") != names.index(
         "Scan classified publication source"
     ) + 1:
@@ -262,9 +296,7 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         if fragment not in validate_evidence:
             _fail("evidence_unbound")
 
-    env = gate.get("env")
-    if not isinstance(env, Mapping):
-        _fail("paths_missing")
+    env = EXPECTED_RUNNER_PATHS
     pages_stage = env.get("PAGES_STAGE")
     pages_path = env.get("PAGES_PAYLOAD")
     evidence_path = env.get("PUBLICATION_EVIDENCE")
