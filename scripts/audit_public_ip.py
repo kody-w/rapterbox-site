@@ -32,6 +32,7 @@ CLASSIFICATIONS = (
 UNREACHABLE_STATUSES = frozenset((404, 410))
 SUCCESS_STATUSES = range(200, 300)
 URL_PATTERN = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
+INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 USER_AGENT = "public-ip-audit/1.0 (+read-only; no-auth)"
 
 
@@ -93,8 +94,14 @@ def _public_host(hostname: str, *, resolve: bool) -> None:
 
 def validate_public_url(value: str, *, resolve: bool = False) -> str:
     """Validate an HTTP(S) URL without returning credentials or query data."""
-    parts = urlsplit(value)
-    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
+    if INVALID_PERCENT_ESCAPE.search(value):
+        raise AuditInputError("URL is malformed")
+    try:
+        parts = urlsplit(value)
+        hostname = parts.hostname
+    except ValueError as exc:
+        raise AuditInputError("URL is malformed") from exc
+    if parts.scheme.lower() not in ("http", "https") or not hostname:
         raise AuditInputError("only explicit public HTTP(S) URLs are supported")
     if parts.username is not None or parts.password is not None:
         raise AuditInputError("URLs containing credentials are not supported")
@@ -102,13 +109,16 @@ def validate_public_url(value: str, *, resolve: bool = False) -> str:
         _ = parts.port
     except ValueError as exc:
         raise AuditInputError("URL has an invalid port") from exc
-    _public_host(parts.hostname, resolve=resolve)
+    _public_host(hostname, resolve=resolve)
     return value
 
 
 def display_url(value: str) -> str:
     """Return a report-safe URL with userinfo, query, and fragment removed."""
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+    except ValueError as exc:
+        raise AuditInputError("URL is malformed") from exc
     host = parts.hostname or ""
     if ":" in host:
         host = f"[{host}]"
@@ -119,9 +129,12 @@ def display_url(value: str) -> str:
 
 
 def canonical_url(value: str) -> str:
-    parts = urlsplit(html.unescape(value.strip()))
-    host = (parts.hostname or "").lower()
-    port = parts.port
+    try:
+        parts = urlsplit(html.unescape(value.strip()))
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError as exc:
+        raise AuditInputError("URL is malformed") from exc
     if port and not (
         (parts.scheme.lower() == "http" and port == 80)
         or (parts.scheme.lower() == "https" and port == 443)

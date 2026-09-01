@@ -119,6 +119,17 @@ artifact. A nonzero exit, absent evidence, non-`pass` result, stale
 policy/manifest digest, or upload of the repository root must block deployment.
 The evidence is publication evidence only and is never a RAPP/1 frame.
 
+Frame 10 can reproduce the complete local gate with:
+
+```bash
+scripts/run_guardrail_checks.sh
+```
+
+The script uses only the repository's existing Python and shell runtimes. It
+runs the release self-test, source scan, exact artifact build-scan, public-IP
+cache-audit tests, and all publication guard tests, then removes its external
+staging directory and every generated Python bytecode cache.
+
 ## Evidence
 
 Evidence is bound to the exact policy hash, commit, and generated-artifact

@@ -33,7 +33,7 @@ except ModuleNotFoundError:
 MANIFEST_FILENAME = "PUBLICATION-MANIFEST.json"
 POLICY_FILENAME = publication_guard.POLICY_FILENAME
 SCANNER_NAME = "rapterbox-publication-artifact"
-SCANNER_VERSION = "1.0.0"
+SCANNER_VERSION = "1.1.0"
 ARTIFACT_BOUNDARY = publication_guard.ARTIFACT_BOUNDARY
 PUBLICATION_CLASSES = frozenset(("site-content", "publication-control"))
 REPOSITORY_HOSTS_DEFAULT = frozenset(
@@ -50,6 +50,7 @@ REPOSITORY_HOSTS_DEFAULT = frozenset(
 HTML_LINK_ATTRIBUTES = frozenset(("action", "data", "href", "poster", "src"))
 LINK_CONTEXT_PRIORITY = {"text": 0, "structured": 1, "navigation": 2}
 ABSOLUTE_URL_PATTERN = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 KNOWN_TEXT_SUFFIXES = frozenset(
     (".css", ".csv", ".gs", ".js", ".md", ".py", ".txt", ".xml")
 )
@@ -182,10 +183,14 @@ def _ensure_no_path_collisions(paths: Iterable[str]) -> None:
 
 
 def _normalize_origin(value: str) -> str:
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+        hostname = parts.hostname
+    except ValueError as error:
+        raise ArtifactError("invalid_external_origin") from error
     if (
         parts.scheme.lower() not in ("http", "https")
-        or not parts.hostname
+        or not hostname
         or parts.username is not None
         or parts.password is not None
         or parts.path not in ("", "/")
@@ -197,8 +202,8 @@ def _normalize_origin(value: str) -> str:
         port = parts.port
     except ValueError as error:
         raise ArtifactError("invalid_external_origin") from error
-    host = parts.hostname.casefold()
-    authority = host
+    host = hostname.casefold()
+    authority = f"[{host}]" if ":" in host else host
     if port and not (
         (parts.scheme.lower() == "http" and port == 80)
         or (parts.scheme.lower() == "https" and port == 443)
@@ -736,7 +741,7 @@ def _looks_like_link_key(key: str | None) -> bool:
 def _absolute_links(value: str, context: str) -> list[ExtractedLink]:
     decoded = unescape(value)
     return [
-        ExtractedLink(match.rstrip(".,);]}>"), context)
+        ExtractedLink(match.rstrip(".,);}>"), context)
         for match in ABSOLUTE_URL_PATTERN.findall(decoded)
     ]
 
@@ -812,8 +817,18 @@ def _media_type(path: str) -> str:
 
 
 def _safe_url_parts(value: str) -> tuple[str, str, str, str]:
-    parts = urlsplit(value)
-    if parts.scheme.casefold() not in ("http", "https") or not parts.hostname:
+    if INVALID_PERCENT_ESCAPE.search(value):
+        raise ArtifactError("invalid_link")
+    try:
+        parts = urlsplit(value)
+        hostname = parts.hostname
+    except ValueError as error:
+        raise ArtifactError("invalid_link") from error
+    if (
+        parts.scheme.casefold() not in ("http", "https")
+        or not hostname
+        or "%" in hostname
+    ):
         raise ArtifactError("invalid_link")
     if parts.username is not None or parts.password is not None:
         raise ArtifactError("credentialed_link")
@@ -822,8 +837,8 @@ def _safe_url_parts(value: str) -> tuple[str, str, str, str]:
     except ValueError as error:
         raise ArtifactError("invalid_link") from error
     scheme = parts.scheme.casefold()
-    host = parts.hostname.casefold()
-    authority = host
+    host = hostname.casefold()
+    authority = f"[{host}]" if ":" in host else host
     if port and not (
         (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
     ):
@@ -884,8 +899,14 @@ def _classify_link(
     try:
         absolute = urljoin(base, raw)
         host, origin, url_path, display = _safe_url_parts(absolute)
-    except ArtifactError:
-        return _redacted_link(source_path, raw, link.context, "forbidden_link")
+    except (ArtifactError, ValueError) as error:
+        classification = (
+            error.code
+            if isinstance(error, ArtifactError)
+            and error.code in {"credentialed_link", "invalid_link"}
+            else "invalid_link"
+        )
+        return _redacted_link(source_path, raw, link.context, classification)
 
     forbidden_hosts = {"0.0.0.0", "127.0.0.1", "::1", "localhost"}
     forbidden_suffixes = (".corp", ".internal", ".lan", ".local")
@@ -1155,6 +1176,7 @@ def scan_artifact(
             artifact_root,
             policy_path=policy_file,
             manifest=guard_paths,
+            enforce_source_classification=False,
         )
     except publication_guard.GuardError as error:
         raise ArtifactError("publication_policy_scan_failed") from error

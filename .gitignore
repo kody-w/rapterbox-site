@@ -1,3 +1,7 @@
 __pycache__/
 *.py[cod]
-
+.pytest_cache/
+.coverage
+tests/.audit-test-work/
+tests/.publication-artifact-work/
+tests/.publication-guard-fixtures/

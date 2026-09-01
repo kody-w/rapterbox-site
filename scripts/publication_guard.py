@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 import html
 import json
+import mimetypes
 import os
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
@@ -21,11 +22,14 @@ import subprocess
 import sys
 from typing import Any, Iterable, Sequence
 import unicodedata
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 POLICY_FILENAME = "PUBLICATION-POLICY.json"
+MANIFEST_FILENAME = "PUBLICATION-MANIFEST.json"
 DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024
+SCANNER_NAME = "rapterbox-publication-source"
+SCANNER_VERSION = "1.1.0"
 ARTIFACT_BOUNDARY = (
     "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts"
 )
@@ -58,6 +62,8 @@ _PRIVATE_REPOSITORY_KEYS = {
 _MAX_FILE_KEYS = {"max_file_bytes", "maximum_file_bytes"}
 _ALLOWED_REPOSITORY_KEYS = {"allowed_repository_slugs_case_insensitive"}
 _REPOSITORY_HOST_KEYS = {"repository_hosts_case_insensitive"}
+_FORBIDDEN_HOST_KEYS = {"forbidden_hosts_case_insensitive"}
+_FORBIDDEN_HOST_SUFFIX_KEYS = {"forbidden_host_suffixes_case_insensitive"}
 
 _OWNERSHIP_PATTERNS = (
     re.compile(
@@ -77,25 +83,42 @@ _OWNERSHIP_PATTERNS = (
 _SENSITIVE_PATTERNS = (
     (
         "private_key",
+        "secret",
         re.compile(r"-{5}BEGIN [A-Z0-9 ]*PRIVATE KEY-{5}", re.IGNORECASE),
     ),
-    ("aws_access_key", re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")),
+    (
+        "aws_access_key",
+        "secret",
+        re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
+    ),
     (
         "github_token",
+        "secret",
         re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,255}\b", re.IGNORECASE),
     ),
-    ("openai_token", re.compile(r"\bsk-[A-Za-z0-9]{20,200}\b")),
-    ("google_api_key", re.compile(r"\bAIza[A-Za-z0-9_-]{30,100}\b")),
+    (
+        "openai_token",
+        "secret",
+        re.compile(r"\bsk-[A-Za-z0-9]{20,200}\b"),
+    ),
+    (
+        "google_api_key",
+        "secret",
+        re.compile(r"\bAIza[A-Za-z0-9_-]{30,100}\b"),
+    ),
     (
         "stripe_secret_key",
+        "secret",
         re.compile(r"\bsk_live_[A-Za-z0-9]{16,200}\b", re.IGNORECASE),
     ),
     (
         "slack_token",
+        "secret",
         re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,200}\b", re.IGNORECASE),
     ),
     (
         "jwt",
+        "secret",
         re.compile(
             r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"
             r"\.[A-Za-z0-9_-]{8,}\b"
@@ -103,6 +126,7 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "credential_assignment",
+        "secret",
         re.compile(
             r"\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|"
             r"passwd|secret)\b\s*[:=]\s*[\"']?"
@@ -112,6 +136,7 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "credential_url",
+        "secret",
         re.compile(
             r"\b[a-z][a-z0-9+.-]*://[^/\s:@]{1,64}:[^/\s@]{4,128}@",
             re.IGNORECASE,
@@ -119,6 +144,7 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "connection_string_secret",
+        "secret",
         re.compile(
             r"\b(?:AccountKey|SharedAccessKey|ClientSecret)\s*=\s*"
             r"[A-Za-z0-9+/=_-]{12,}",
@@ -127,6 +153,7 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "webhook_secret",
+        "secret",
         re.compile(
             r"https://hooks\.slack\.com/services/"
             r"[A-Za-z0-9_-]{6,}/[A-Za-z0-9_-]{6,}/[A-Za-z0-9_-]{12,}",
@@ -135,6 +162,7 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "email_address",
+        "customer",
         re.compile(
             r"(?<![A-Za-z0-9.!#$%&'*+/=?^_`{|}~-])"
             r"[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@"
@@ -145,10 +173,12 @@ _SENSITIVE_PATTERNS = (
     ),
     (
         "us_ssn",
+        "customer",
         re.compile(r"(?<!\d)(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}(?!\d)"),
     ),
     (
         "phone_number",
+        "customer",
         re.compile(
             r"(?:\b(?:phone|mobile|cell|tel)\b\s*[:=]?\s*)"
             r"(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})"
@@ -156,16 +186,54 @@ _SENSITIVE_PATTERNS = (
             re.IGNORECASE,
         ),
     ),
+    (
+        "postal_address",
+        "customer",
+        re.compile(
+            r"\b(?:address|street)\b\s*[:=]\s*[\"']?\d{1,6}\s+"
+            r"[A-Za-z0-9 .'-]{2,80}\s+"
+            r"(?:street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "submitted_customer_record",
+        "customer",
+        re.compile(
+            r"[\"'](?:submitted_at|submission_id|waitlist_submission)[\"']\s*:"
+            r".{0,256}[\"'](?:email|phone|note|customer_id|account_id)[\"']\s*:",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 _URL_PATTERN = re.compile(
-    r"(?:https?|ssh)://[^\s<>\"']+|git@[A-Z0-9.-]+:[^\s<>\"']+",
+    r"(?:https?|ssh)://[^\s<>\"']+"
+    r"|(?<![A-Z0-9:+.-])//[A-Z0-9.-]+\.[A-Z]{2,}(?:/[^\s<>\"']*)?"
+    r"|git@[A-Z0-9.-]+:[^\s<>\"']+",
     re.IGNORECASE,
+)
+_INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_ZERO_WIDTH_CHARACTERS = dict.fromkeys(
+    map(ord, ("\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"))
 )
 
 
 class GuardError(Exception):
     """An operational or configuration error that prevents a complete scan."""
+
+
+class _DuplicateJsonKey(ValueError):
+    pass
+
+
+def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise _DuplicateJsonKey
+        value[key] = item
+    return value
 
 
 @dataclass(frozen=True)
@@ -177,7 +245,12 @@ class Policy:
     private_repositories: tuple[str, ...] = ()
     allowed_repository_slugs: tuple[str, ...] = ()
     repository_hosts: tuple[str, ...] = ()
+    forbidden_hosts: tuple[str, ...] = ()
+    forbidden_host_suffixes: tuple[str, ...] = ()
     forbidden_repository_slug_patterns: tuple["PolicyPattern", ...] = ()
+    source_default_class: str = "repository-source"
+    source_manifest: str | None = None
+    source_classification_rules: tuple["SourceClassificationRule", ...] = ()
     max_file_bytes: int = DEFAULT_MAX_FILE_BYTES
 
 
@@ -186,6 +259,15 @@ class PolicyPattern:
     identifier: str
     expression: str
     compiled: re.Pattern[str]
+
+
+@dataclass(frozen=True)
+class SourceClassificationRule:
+    identifier: str
+    patterns: tuple[str, ...]
+    classification: str
+    content_contract: str
+    artifact_disposition: str
 
 
 @dataclass(frozen=True)
@@ -291,6 +373,76 @@ def _as_patterns(values: Iterable[Any], label: str) -> tuple[PolicyPattern, ...]
     return tuple(patterns)
 
 
+def _source_classification_contract(
+    document: dict[str, Any],
+) -> tuple[str, str | None, tuple[SourceClassificationRule, ...]]:
+    contract = document.get("source_tree_classification")
+    if contract is None:
+        return "repository-source", None, ()
+    if not isinstance(contract, dict):
+        raise GuardError("source_tree_classification must be an object")
+
+    default_class = contract.get("default_class")
+    if not isinstance(default_class, str) or not default_class.strip():
+        raise GuardError("source_tree_classification requires a default_class")
+    manifest = contract.get("artifact_manifest")
+    if manifest is not None and (
+        not isinstance(manifest, str)
+        or not manifest
+        or _is_absolute_or_traversal(manifest)
+    ):
+        raise GuardError("source_tree_classification has an invalid artifact manifest")
+    raw_rules = contract.get("path_rules")
+    if not isinstance(raw_rules, list):
+        raise GuardError("source_tree_classification requires path_rules")
+
+    rules: list[SourceClassificationRule] = []
+    valid_contracts = {
+        "full",
+        "self-reference-safe",
+        "synthetic-test-input",
+        "nondeploy-operational-contact",
+    }
+    valid_dispositions = {
+        "must-be-absent",
+        "publication-control",
+    }
+    for index, raw_rule in enumerate(raw_rules):
+        if not isinstance(raw_rule, dict):
+            raise GuardError("source classification rules must be objects")
+        patterns = raw_rule.get("patterns")
+        classification = raw_rule.get("class")
+        content_contract = raw_rule.get("content_contract", "full")
+        artifact_disposition = raw_rule.get(
+            "artifact_disposition", "must-be-absent"
+        )
+        if (
+            not isinstance(patterns, list)
+            or not patterns
+            or not all(
+                isinstance(pattern, str)
+                and pattern.startswith("/")
+                and "\0" not in pattern
+                for pattern in patterns
+            )
+            or not isinstance(classification, str)
+            or not classification.strip()
+            or content_contract not in valid_contracts
+            or artifact_disposition not in valid_dispositions
+        ):
+            raise GuardError("source classification rule is invalid")
+        rules.append(
+            SourceClassificationRule(
+                identifier=f"source_tree_classification.path_rules[{index}]",
+                patterns=tuple(sorted(set(patterns), key=lambda value: value.casefold())),
+                classification=classification,
+                content_contract=content_contract,
+                artifact_disposition=artifact_disposition,
+            )
+        )
+    return default_class, manifest, tuple(rules)
+
+
 def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tuple[Policy, Path | None]:
     explicit = policy_path is not None
     path = Path(policy_path) if explicit else root / POLICY_FILENAME
@@ -300,13 +452,29 @@ def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tupl
         if explicit:
             raise GuardError("the requested policy file does not exist")
         return Policy(), None
-    if not path.is_file():
+    try:
+        relative_policy = Path(os.path.abspath(path)).relative_to(root)
+    except ValueError:
+        relative_policy = None
+    if relative_policy is not None and _first_symlink(root, relative_policy) is not None:
+        raise GuardError("the policy path must not contain symlinks")
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise GuardError("the policy path could not be inspected") from error
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
         raise GuardError("the policy path is not a regular file")
+    if metadata.st_size > DEFAULT_MAX_FILE_BYTES:
+        raise GuardError("the policy file is too large")
 
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
+        document = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=_json_object
+        )
     except UnicodeDecodeError as error:
         raise GuardError("the policy file is not UTF-8 text") from error
+    except _DuplicateJsonKey as error:
+        raise GuardError("the policy file contains duplicate JSON keys") from error
     except json.JSONDecodeError as error:
         raise GuardError(
             f"the policy file is invalid JSON at line {error.lineno}, column {error.colno}"
@@ -351,6 +519,21 @@ def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tupl
         _find_policy_values(document, {"forbidden_repository_slug_patterns"}),
         "forbidden_repository_slug_pattern",
     )
+    forbidden_hosts = _as_entries(
+        _find_policy_values(document, _FORBIDDEN_HOST_KEYS),
+        ("host", "name"),
+        "forbidden host",
+    )
+    forbidden_host_suffixes = _as_entries(
+        _find_policy_values(document, _FORBIDDEN_HOST_SUFFIX_KEYS),
+        ("suffix", "name"),
+        "forbidden host suffix",
+    )
+    (
+        source_default_class,
+        source_manifest,
+        source_classification_rules,
+    ) = _source_classification_contract(document)
 
     maximums = _find_policy_values(document, _MAX_FILE_KEYS)
     max_file_bytes = DEFAULT_MAX_FILE_BYTES
@@ -369,7 +552,12 @@ def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tupl
             private_repositories=repositories,
             allowed_repository_slugs=allowed_repositories,
             repository_hosts=repository_hosts,
+            forbidden_hosts=forbidden_hosts,
+            forbidden_host_suffixes=forbidden_host_suffixes,
             forbidden_repository_slug_patterns=forbidden_repository_patterns,
+            source_default_class=source_default_class,
+            source_manifest=source_manifest,
+            source_classification_rules=source_classification_rules,
             max_file_bytes=max_file_bytes,
         ),
         path.resolve(),
@@ -381,12 +569,16 @@ def _read_manifest(path: Path) -> list[str]:
         raw = path.read_bytes()
     except OSError as error:
         raise GuardError("the manifest could not be read") from error
+    if len(raw) > DEFAULT_MAX_FILE_BYTES:
+        raise GuardError("the manifest is too large")
 
     stripped = raw.lstrip()
     if stripped.startswith((b"[", b"{")):
         try:
-            document = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            document = json.loads(
+                raw.decode("utf-8"), object_pairs_hook=_json_object
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, _DuplicateJsonKey) as error:
             raise GuardError("the manifest is not valid UTF-8 JSON") from error
         if isinstance(document, dict):
             document = document.get("paths", document.get("files"))
@@ -492,9 +684,9 @@ def _is_binary(data: bytes) -> bool:
 
 
 def _filename_matches(path: str, pattern: str) -> bool:
-    lowered_path = path.casefold()
-    lowered_pattern = pattern.replace("\\", "/").casefold()
-    basename = Path(path).name.casefold()
+    lowered_path = _normalise_match_text(path).casefold()
+    lowered_pattern = _normalise_match_text(pattern.replace("\\", "/")).casefold()
+    basename = Path(_normalise_match_text(path)).name.casefold()
     return fnmatch.fnmatchcase(lowered_path, lowered_pattern) or fnmatch.fnmatchcase(
         basename, lowered_pattern
     )
@@ -506,7 +698,10 @@ def _repository_needles(repository: str) -> tuple[str, ...]:
         return ()
 
     slug: str | None = None
-    parsed = urlparse(value)
+    try:
+        parsed = urlparse(value)
+    except ValueError as error:
+        raise GuardError("a repository policy value is malformed") from error
     if parsed.scheme and parsed.netloc:
         repo_path = parsed.path.strip("/")
         if repo_path:
@@ -531,20 +726,36 @@ def _repository_needles(repository: str) -> tuple[str, ...]:
 
 
 def _normalise_repository_slug(slug: str) -> str:
-    return slug.strip().strip("/").removesuffix(".git").casefold()
+    return (
+        _normalise_match_text(unquote(slug))
+        .strip()
+        .strip("/")
+        .removesuffix(".git")
+        .casefold()
+    )
 
 
 def _repository_reference(value: str) -> tuple[str, str] | None:
-    candidate = value.rstrip(".,);]}>")
+    candidate = value.rstrip(".,);}>")
     if candidate.casefold().startswith("git@") and ":" in candidate:
         authority, path = candidate.split(":", 1)
         host = authority.split("@", 1)[1].casefold()
-        slug = path.strip("/").removesuffix(".git")
+        slug = unquote(path).strip("/").removesuffix(".git")
         return host, slug
 
-    parsed = urlparse(candidate)
-    host = (parsed.hostname or "").casefold()
-    parts = [part for part in parsed.path.split("/") if part]
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return None
+    try:
+        host = (parsed.hostname or "").casefold()
+    except ValueError:
+        return None
+    try:
+        decoded_path = unquote(parsed.path, errors="strict")
+    except (UnicodeDecodeError, ValueError):
+        return None
+    parts = [part for part in decoded_path.split("/") if part]
     if not host or not parts:
         return None
     if host == "api.github.com" and parts[:1] == ["repos"]:
@@ -560,102 +771,310 @@ def _repository_reference(value: str) -> tuple[str, str] | None:
 
 
 def _normalise_policy_text(text: str) -> str:
-    normalised = unicodedata.normalize("NFKC", html.unescape(text))
+    normalised = _normalise_match_text(text)
     return " ".join(normalised.split())
+
+
+def _normalise_match_text(text: str) -> str:
+    normalised = text
+    for _ in range(2):
+        decoded = html.unescape(normalised)
+        if decoded == normalised:
+            break
+        normalised = decoded
+    return unicodedata.normalize("NFKC", normalised).translate(
+        _ZERO_WIDTH_CHARACTERS
+    )
+
+
+def _source_rule_matches(path: str, pattern: str) -> bool:
+    normalized_path = "/" + _normalise_match_text(path).lstrip("/")
+    normalized_pattern = _normalise_match_text(pattern)
+    return fnmatch.fnmatchcase(
+        normalized_path.casefold(), normalized_pattern.casefold()
+    )
+
+
+def _source_classification(
+    path: str,
+    policy: Policy,
+    artifact_entries: dict[str, str],
+) -> tuple[str, str, str]:
+    matches = [
+        rule
+        for rule in policy.source_classification_rules
+        if any(_source_rule_matches(path, pattern) for pattern in rule.patterns)
+    ]
+    if len(matches) > 1:
+        raise GuardError("a source path matches multiple classification rules")
+    if matches:
+        rule = matches[0]
+        return (
+            rule.classification,
+            rule.content_contract,
+            rule.artifact_disposition,
+        )
+    if path in artifact_entries:
+        return f"deploy-{artifact_entries[path]}", "full", "declared-artifact"
+    return policy.source_default_class, "full", "must-be-absent"
+
+
+def _artifact_manifest_entries(root: Path, policy: Policy) -> dict[str, str]:
+    if policy.source_manifest is None:
+        return {}
+    path = root / policy.source_manifest
+    try:
+        if _first_symlink(root, Path(policy.source_manifest)) is not None:
+            raise GuardError("the artifact manifest must not be a symlink")
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise GuardError("the artifact manifest is not a regular file")
+        if metadata.st_size > DEFAULT_MAX_FILE_BYTES:
+            raise GuardError("the artifact manifest is too large")
+        document = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=_json_object
+        )
+    except GuardError:
+        raise
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        _DuplicateJsonKey,
+    ) as error:
+        raise GuardError("the artifact manifest is unreadable or invalid") from error
+    entries = document.get("paths") if isinstance(document, dict) else None
+    if not isinstance(entries, list):
+        raise GuardError("the artifact manifest paths are invalid")
+    classified: dict[str, str] = {}
+    collision_keys: dict[str, str] = {}
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"class", "path"}
+            or not isinstance(entry["path"], str)
+            or not isinstance(entry["class"], str)
+            or _is_absolute_or_traversal(entry["path"])
+        ):
+            raise GuardError("the artifact manifest contains an invalid path")
+        candidate = entry["path"].replace("\\", "/")
+        key = unicodedata.normalize("NFKC", candidate).casefold()
+        if key in collision_keys:
+            raise GuardError("the artifact manifest contains a path collision")
+        collision_keys[key] = candidate
+        classified[candidate] = entry["class"]
+    return classified
+
+
+def _path_collision_members(paths: Iterable[str]) -> set[str]:
+    groups: dict[str, list[str]] = {}
+    for path in paths:
+        key = unicodedata.normalize("NFKC", path.replace("\\", "/")).casefold()
+        groups.setdefault(key, []).append(path)
+    return {
+        path
+        for group in groups.values()
+        if len(group) > 1
+        for path in group
+    }
+
+
+def _media_type(path: str, is_binary: bool) -> str:
+    guessed, _ = mimetypes.guess_type(path)
+    if guessed:
+        return guessed
+    return "application/octet-stream" if is_binary else "text/plain"
 
 
 def _line_findings(
     path: str,
     text: str,
     policy: Policy,
+    *,
+    content_contract: str = "full",
 ) -> Iterable[Finding]:
+    definitions_only = content_contract in {
+        "self-reference-safe",
+        "synthetic-test-input",
+    }
+    synthetic_input = content_contract == "synthetic-test-input"
+    allow_customer_shapes = content_contract != "nondeploy-operational-contact"
     private_needles = [
         (index, needle)
         for index, repository in enumerate(policy.private_repositories)
         for needle in _repository_needles(repository)
     ]
+    allowed_slugs = {
+        _normalise_repository_slug(slug)
+        for slug in policy.allowed_repository_slugs
+    }
+    repository_hosts = {host.casefold() for host in policy.repository_hosts}
+    forbidden_hosts = {host.casefold() for host in policy.forbidden_hosts}
+    forbidden_suffixes = tuple(
+        suffix.casefold() for suffix in policy.forbidden_host_suffixes
+    )
 
     for line_number, line in enumerate(text.splitlines(), start=1):
-        folded = line.casefold()
+        normalized = _normalise_match_text(line)
+        folded = normalized.casefold()
         normalised_line = _normalise_policy_text(line)
-        for index, phrase in enumerate(policy.forbidden_phrases):
-            if _normalise_policy_text(phrase).casefold() in normalised_line.casefold():
-                yield Finding(
-                    "forbidden_phrase",
-                    path,
-                    f"policy.forbidden_phrases[{index}]",
-                    line_number,
-                )
+        if not definitions_only:
+            for index, phrase in enumerate(policy.forbidden_phrases):
+                if (
+                    _normalise_policy_text(phrase).casefold()
+                    in normalised_line.casefold()
+                ):
+                    yield Finding(
+                        "forbidden_phrase",
+                        path,
+                        f"policy.forbidden_phrases[{index}]",
+                        line_number,
+                    )
 
-        for pattern in policy.forbidden_phrase_patterns:
-            match = pattern.compiled.search(normalised_line)
-            if match:
-                yield Finding(
-                    "forbidden_phrase",
-                    path,
-                    pattern.identifier,
-                    line_number,
-                    match.start() + 1,
-                )
+            for pattern in policy.forbidden_phrase_patterns:
+                match = pattern.compiled.search(normalised_line)
+                if match:
+                    yield Finding(
+                        "forbidden_phrase",
+                        path,
+                        pattern.identifier,
+                        line_number,
+                        match.start() + 1,
+                    )
 
-        for index, needle in private_needles:
-            if needle in folded:
-                yield Finding(
-                    "private_repository_link",
-                    path,
-                    f"policy.private_repositories[{index}]",
-                    line_number,
-                )
+            for index, needle in private_needles:
+                if needle in folded:
+                    yield Finding(
+                        "private_repository_link",
+                        path,
+                        f"policy.private_repositories[{index}]",
+                        line_number,
+                    )
 
-        allowed_slugs = {
-            _normalise_repository_slug(slug)
-            for slug in policy.allowed_repository_slugs
-        }
-        repository_hosts = {host.casefold() for host in policy.repository_hosts}
-        for match in _URL_PATTERN.finditer(line):
-            reference = _repository_reference(match.group(0))
-            if reference is None:
+            for index, pattern in enumerate(_OWNERSHIP_PATTERNS):
+                match = pattern.search(normalized)
+                if match:
+                    yield Finding(
+                        "ownership_percentage_claim",
+                        path,
+                        f"ownership_pattern[{index}]",
+                        line_number,
+                        match.start() + 1,
+                    )
+
+        if not synthetic_input:
+            url_lines = [normalized]
+            if (
+                re.search(r"%[0-9A-Fa-f]{2}", normalized)
+                and not _INVALID_PERCENT_ESCAPE.search(normalized)
+            ):
+                decoded_line = unquote(normalized)
+                if decoded_line != normalized:
+                    url_lines.append(decoded_line)
+            seen_urls: set[str] = set()
+            for match in (
+                match
+                for candidate_line in url_lines
+                for match in _URL_PATTERN.finditer(candidate_line)
+            ):
+                raw = match.group(0).rstrip(".,);}>")
+                canonical_candidate = (
+                    unquote(raw)
+                    if not _INVALID_PERCENT_ESCAPE.search(raw)
+                    else raw
+                )
+                if canonical_candidate in seen_urls:
+                    continue
+                seen_urls.add(canonical_candidate)
+                if _INVALID_PERCENT_ESCAPE.search(raw):
+                    yield Finding(
+                        "malformed_url",
+                        path,
+                        "invalid_percent_encoding",
+                        line_number,
+                        match.start() + 1,
+                    )
+                    continue
+                try:
+                    parsed = urlparse(raw)
+                    hostname = (parsed.hostname or "").casefold()
+                    _ = parsed.port
+                except ValueError:
+                    yield Finding(
+                        "malformed_url",
+                        path,
+                        "url_parser",
+                        line_number,
+                        match.start() + 1,
+                    )
+                    continue
+                if parsed.username is not None or parsed.password is not None:
+                    yield Finding(
+                        "sensitive_data_shape",
+                        path,
+                        "credential_url",
+                        line_number,
+                        match.start() + 1,
+                    )
+                if hostname in forbidden_hosts or any(
+                    hostname.endswith(suffix) for suffix in forbidden_suffixes
+                ):
+                    yield Finding(
+                        "forbidden_url_host",
+                        path,
+                        "url_policy.forbidden_host",
+                        line_number,
+                        match.start() + 1,
+                    )
+
+                reference = _repository_reference(raw)
+                if reference is not None:
+                    host, slug = reference
+                    if host in repository_hosts:
+                        normalised_slug = _normalise_repository_slug(slug)
+                        if normalised_slug not in allowed_slugs:
+                            pattern_match = next(
+                                (
+                                    pattern
+                                    for pattern in policy.forbidden_repository_slug_patterns
+                                    if pattern.compiled.search(normalised_slug)
+                                ),
+                                None,
+                            )
+                            detector = (
+                                pattern_match.identifier
+                                if pattern_match is not None
+                                else "repository_visibility_default_deny"
+                            )
+                            yield Finding(
+                                "private_repository_link",
+                                path,
+                                detector,
+                                line_number,
+                                match.start() + 1,
+                            )
+
+                decoded_path = unquote(parsed.path)
+                basename = PureWindowsPath(decoded_path.replace("/", "\\")).name
+                if any(
+                    _filename_matches(basename, pattern)
+                    for pattern in policy.forbidden_filenames
+                ) or any(
+                    pattern.compiled.search(_normalise_match_text(basename))
+                    for pattern in policy.forbidden_filename_patterns
+                ):
+                    yield Finding(
+                        "forbidden_downloadable_document",
+                        path,
+                        "url_path_forbidden_filename",
+                        line_number,
+                        match.start() + 1,
+                    )
+
+        for detector, category, pattern in _SENSITIVE_PATTERNS:
+            if category == "customer" and not allow_customer_shapes:
                 continue
-            host, slug = reference
-            if host not in repository_hosts:
-                continue
-            normalised_slug = _normalise_repository_slug(slug)
-            if normalised_slug in allowed_slugs:
-                continue
-            pattern_match = next(
-                (
-                    pattern
-                    for pattern in policy.forbidden_repository_slug_patterns
-                    if pattern.compiled.search(normalised_slug)
-                ),
-                None,
-            )
-            detector = (
-                pattern_match.identifier
-                if pattern_match is not None
-                else "repository_visibility_default_deny"
-            )
-            yield Finding(
-                "private_repository_link",
-                path,
-                detector,
-                line_number,
-                match.start() + 1,
-            )
-
-        for index, pattern in enumerate(_OWNERSHIP_PATTERNS):
-            match = pattern.search(line)
-            if match:
-                yield Finding(
-                    "ownership_percentage_claim",
-                    path,
-                    f"ownership_pattern[{index}]",
-                    line_number,
-                    match.start() + 1,
-                )
-
-        for detector, pattern in _SENSITIVE_PATTERNS:
-            match = pattern.search(line)
+            match = pattern.search(normalized)
             if match:
                 yield Finding(
                     "sensitive_data_shape",
@@ -671,6 +1090,7 @@ def scan_repository(
     *,
     policy_path: str | os.PathLike[str] | None = None,
     manifest: Iterable[str] | str | os.PathLike[str] | None = None,
+    enforce_source_classification: bool = True,
 ) -> dict[str, Any]:
     """Scan tracked or explicitly manifested paths and return JSON-ready evidence."""
 
@@ -683,15 +1103,69 @@ def scan_repository(
 
     policy, loaded_policy_path = _load_policy(resolved_root, policy_path)
     paths = _manifest_paths(resolved_root, manifest)
+    artifact_entries = (
+        _artifact_manifest_entries(resolved_root, policy)
+        if enforce_source_classification
+        else {}
+    )
 
     findings: list[Finding] = []
     binary_paths: list[str] = []
     text_paths: list[str] = []
     skipped_paths: list[str] = []
     unscanned_paths: list[str] = []
+    coverage: dict[str, dict[str, Any]] = {}
+    classifications: dict[str, tuple[str, str, str]] = {}
+    collision_members = _path_collision_members(paths)
+    for collision_path in sorted(
+        collision_members, key=lambda path: (path.casefold(), path)
+    ):
+        findings.append(
+            Finding(
+                "path_collision",
+                collision_path.replace("\\", "/"),
+                "unicode_nfkc_casefold",
+            )
+        )
 
     for raw_path in paths:
         display_path = raw_path.replace("\\", "/")
+        classification, content_contract, artifact_disposition = (
+            _source_classification(display_path, policy, artifact_entries)
+        )
+        if (
+            loaded_policy_path is not None
+            and not policy.source_classification_rules
+            and (resolved_root / Path(raw_path)).resolve(strict=False)
+            == loaded_policy_path
+        ):
+            classification = "publication-control"
+            content_contract = "self-reference-safe"
+        classifications[display_path] = (
+            classification,
+            content_contract,
+            artifact_disposition,
+        )
+        artifact_class = artifact_entries.get(display_path)
+        if artifact_disposition == "must-be-absent" and artifact_class is not None:
+            findings.append(
+                Finding(
+                    "nondeploy_path_in_artifact_manifest",
+                    display_path,
+                    "source_classification",
+                )
+            )
+        if artifact_disposition == "publication-control" and artifact_class != (
+            "publication-control"
+        ):
+            findings.append(
+                Finding(
+                    "publication_control_manifest_mismatch",
+                    display_path,
+                    "source_classification",
+                )
+            )
+
         for index, pattern in enumerate(policy.forbidden_filenames):
             if _filename_matches(display_path, pattern):
                 findings.append(
@@ -702,7 +1176,9 @@ def scan_repository(
                     )
                 )
         for pattern in policy.forbidden_filename_patterns:
-            if pattern.compiled.search(Path(display_path).name):
+            if pattern.compiled.search(
+                _normalise_match_text(Path(display_path).name)
+            ):
                 findings.append(
                     Finding(
                         "forbidden_filename",
@@ -714,6 +1190,17 @@ def scan_repository(
         if _is_absolute_or_traversal(raw_path):
             findings.append(Finding("path_escape", display_path, "manifest_path"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "unknown",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
 
         relative = Path(raw_path)
@@ -725,6 +1212,17 @@ def scan_repository(
                     Finding("symlink_path", display_path, "path_metadata")
                 )
                 unscanned_paths.append(display_path)
+                coverage[display_path] = {
+                    "category": classification,
+                    "media_type": "symlink",
+                    "origin": (
+                        "tracked-source" if manifest is None else "selected-source"
+                    ),
+                    "path": display_path,
+                    "scanner_status": "deny",
+                    "sha256": None,
+                    "size": None,
+                }
                 continue
             resolved_candidate = candidate.resolve(strict=False)
             if os.path.commonpath(
@@ -734,14 +1232,32 @@ def scan_repository(
                     Finding("path_escape", display_path, "resolved_path")
                 )
                 unscanned_paths.append(display_path)
+                coverage[display_path] = {
+                    "category": classification,
+                    "media_type": "unknown",
+                    "origin": (
+                        "tracked-source" if manifest is None else "selected-source"
+                    ),
+                    "path": display_path,
+                    "scanner_status": "deny",
+                    "sha256": None,
+                    "size": None,
+                }
                 continue
         except (OSError, ValueError, GuardError):
             findings.append(Finding("unreadable_path", display_path, "path_metadata"))
             unscanned_paths.append(display_path)
-            continue
-
-        if loaded_policy_path is not None and resolved_candidate == loaded_policy_path:
-            skipped_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "unknown",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
 
         try:
@@ -749,15 +1265,48 @@ def scan_repository(
         except FileNotFoundError:
             findings.append(Finding("missing_path", display_path, "path_metadata"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "missing",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
         except OSError:
             findings.append(Finding("unreadable_path", display_path, "path_metadata"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "unknown",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
 
         if not stat.S_ISREG(mode):
             findings.append(Finding("unsupported_file_type", display_path, "path_metadata"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "special",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
 
         try:
@@ -766,19 +1315,82 @@ def scan_repository(
         except OSError:
             findings.append(Finding("unreadable_path", display_path, "file_read"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": "unknown",
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": None,
+            }
             continue
 
         if len(data) > policy.max_file_bytes:
             findings.append(Finding("file_too_large", display_path, "size_limit"))
             unscanned_paths.append(display_path)
+            coverage[display_path] = {
+                "category": classification,
+                "media_type": _media_type(display_path, False),
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "deny",
+                "sha256": None,
+                "size": len(data),
+            }
             continue
         if _is_binary(data):
             binary_paths.append(display_path)
+            findings.extend(
+                _line_findings(
+                    display_path,
+                    data.decode("utf-8", errors="replace"),
+                    policy,
+                    content_contract=content_contract,
+                )
+            )
+            coverage[display_path] = {
+                "category": classification,
+                "content_contract": content_contract,
+                "media_type": _media_type(display_path, True),
+                "origin": (
+                    "tracked-source" if manifest is None else "selected-source"
+                ),
+                "path": display_path,
+                "scanner_status": "pass",
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size": len(data),
+            }
             continue
 
         text_paths.append(display_path)
-        text = data.decode("utf-8-sig", errors="replace")
-        findings.extend(_line_findings(display_path, text, policy))
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            findings.append(Finding("invalid_utf8", display_path, "utf8_decoder"))
+            text = data.decode("utf-8-sig", errors="replace")
+        findings.extend(
+            _line_findings(
+                display_path,
+                text,
+                policy,
+                content_contract=content_contract,
+            )
+        )
+        coverage[display_path] = {
+            "category": classification,
+            "content_contract": content_contract,
+            "media_type": _media_type(display_path, False),
+            "origin": "tracked-source" if manifest is None else "selected-source",
+            "path": display_path,
+            "scanner_status": "pass",
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "size": len(data),
+        }
 
     unique_findings = {
         (
@@ -801,21 +1413,88 @@ def scan_repository(
             finding.detector,
         ),
     )
+    sensitive_paths = {
+        finding.path
+        for finding in ordered_findings
+        if finding.rule
+        in {
+            "forbidden_filename",
+            "path_collision",
+            "path_escape",
+        }
+    }
+
+    def evidence_path(path: str) -> str:
+        if path not in sensitive_paths:
+            return path
+        return "redacted-path:" + hashlib.sha256(path.encode("utf-8")).hexdigest()[:16]
+
+    denied_paths = {finding.path for finding in ordered_findings}
+    coverage_records = []
+    for path in sorted(coverage, key=lambda value: (value.casefold(), value)):
+        record = dict(coverage[path])
+        _, _, artifact_disposition = classifications[path]
+        record["artifact_disposition"] = artifact_disposition
+        record["artifact_manifest_class"] = artifact_entries.get(path)
+        record["path"] = evidence_path(path)
+        if path in denied_paths:
+            record["scanner_status"] = "deny"
+        coverage_records.append(record)
 
     return {
         "artifact_boundary": ARTIFACT_BOUNDARY,
-        "binary_paths": sorted(set(binary_paths), key=lambda path: (path.casefold(), path)),
+        "binary_paths": [
+            evidence_path(path)
+            for path in sorted(
+                set(binary_paths), key=lambda value: (value.casefold(), value)
+            )
+        ],
+        "coverage_records": coverage_records,
         "finding_count": len(ordered_findings),
-        "findings": [finding.as_dict() for finding in ordered_findings],
+        "findings": [
+            Finding(
+                finding.rule,
+                evidence_path(finding.path),
+                finding.detector,
+                finding.line,
+                finding.column,
+            ).as_dict()
+            for finding in ordered_findings
+        ],
         "policy_loaded": loaded_policy_path is not None,
         "result": "deny" if ordered_findings else "pass",
+        "scan_completed_at": None,
+        "scan_counts": {
+            "classified_paths": len(classifications),
+            "findings": len(ordered_findings),
+            "scanned_paths": len(set(binary_paths + text_paths)),
+            "selected_paths": len(paths),
+            "unscanned_paths": len(set(unscanned_paths)),
+        },
         "scanned_path_count": len(set(binary_paths + text_paths)),
         "schema_version": 1,
-        "skipped_paths": sorted(set(skipped_paths), key=lambda path: (path.casefold(), path)),
-        "text_paths": sorted(set(text_paths), key=lambda path: (path.casefold(), path)),
-        "unscanned_paths": sorted(
-            set(unscanned_paths), key=lambda path: (path.casefold(), path)
-        ),
+        "scan_started_at": None,
+        "scanner_name": SCANNER_NAME,
+        "scanner_version": SCANNER_VERSION,
+        "skipped_paths": [
+            evidence_path(path)
+            for path in sorted(
+                set(skipped_paths), key=lambda value: (value.casefold(), value)
+            )
+        ],
+        "source_file_count": len(paths),
+        "text_paths": [
+            evidence_path(path)
+            for path in sorted(
+                set(text_paths), key=lambda value: (value.casefold(), value)
+            )
+        ],
+        "unscanned_paths": [
+            evidence_path(path)
+            for path in sorted(
+                set(unscanned_paths), key=lambda value: (value.casefold(), value)
+            )
+        ],
     }
 
 

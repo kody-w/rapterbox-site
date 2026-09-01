@@ -1,7 +1,7 @@
 {
   "document_type": "publication-policy",
   "policy_id": "kody-w/rapterbox-site:public-publication-boundary",
-  "policy_version": "1.1.0",
+  "policy_version": "1.2.0",
   "repository": "kody-w/rapterbox-site",
   "normative": true,
   "default_disposition": "deny",
@@ -385,6 +385,11 @@
       "kody-w/rappvision-rappterbox",
       "rbox-rappters-2026/dogg-attention"
     ],
+    "allowlist_verification": {
+      "method": "unauthenticated GitHub repository API returned HTTP 200",
+      "verified_on": "2026-09-01",
+      "visibility": "public"
+    },
     "forbidden_repository_slug_patterns": {
       "engine": "re2",
       "case_insensitive": true,
@@ -413,6 +418,72 @@
       "url_policy.forbidden_repository_slug_patterns"
     ],
     "requirements": "These files may name prohibitions and scanner expressions only. They may not contain source doctrine, excerpts, private repository URLs or slugs, secrets, customer data, non-public legal data, or other private content."
+  },
+  "source_tree_classification": {
+    "default_class": "repository-source-nondeploy",
+    "artifact_manifest": "PUBLICATION-MANIFEST.json",
+    "path_rules": [
+      {
+        "patterns": [
+          "/PUBLICATION-POLICY.json",
+          "/docs/PUBLICATION-BOUNDARY.md"
+        ],
+        "class": "publication-control",
+        "content_contract": "self-reference-safe",
+        "artifact_disposition": "publication-control"
+      },
+      {
+        "patterns": [
+          "/PUBLICATION-MANIFEST.json",
+          "/.github/workflows/release-pages.yml",
+          "/.gitignore",
+          "/release-pages-selftest.py",
+          "/scripts/run_guardrail_checks.sh"
+        ],
+        "class": "publication-build-control",
+        "content_contract": "full",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/scripts/publication_artifact.py",
+          "/scripts/publication_guard.py"
+        ],
+        "class": "guardrail-implementation",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/tests/test_publication_artifact.py",
+          "/tests/test_publication_guard_source.py"
+        ],
+        "class": "guardrail-synthetic-test-input",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/docs/PUBLIC-IP-AUDIT.md",
+          "/scripts/audit_public_ip.py",
+          "/tests/test_audit_public_ip.py"
+        ],
+        "class": "public-ip-audit-control-or-test-input",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/waitlist/Code.gs",
+          "/waitlist/README.md",
+          "/waitlist/com.wildhaven.waitlist-texter.plist",
+          "/waitlist/texter.py"
+        ],
+        "class": "nondeploy-waitlist-implementation",
+        "content_contract": "nondeploy-operational-contact",
+        "artifact_disposition": "must-be-absent"
+      }
+    ]
   },
   "scan_requirement": {
     "required_gates": [
