@@ -1,7 +1,7 @@
 {
   "document_type": "publication-policy",
   "policy_id": "kody-w/rapterbox-site:public-publication-boundary",
-  "policy_version": "1.2.0",
+  "policy_version": "1.3.0",
   "repository": "kody-w/rapterbox-site",
   "normative": true,
   "default_disposition": "deny",
@@ -342,6 +342,76 @@
       }
     ]
   },
+  "structured_data_enforcement": {
+    "key_normalization": [
+      "unicode_nfkc",
+      "decode_html_entities",
+      "percent_decode",
+      "remove_zero_width",
+      "split_camel_case",
+      "collapse_non_alphanumeric"
+    ],
+    "encoded_key_decoding_passes": 2,
+    "maximum_nesting_depth": 32,
+    "maximum_collection_items": 10000,
+    "approved_placeholders": [
+      {
+        "id": "public-schema-field-description",
+        "detectors": [
+          "submitted_names",
+          "email_address_values",
+          "phone_number_values",
+          "postal_address_values",
+          "customer_notes",
+          "customer_or_account_identifiers",
+          "waitlist_submission_records"
+        ],
+        "paths": [
+          "/.well-known/agent.json",
+          "/agent.json",
+          "/frames/*.json",
+          "/lessons.jsonl"
+        ],
+        "patterns": [
+          "(?:string|text|number|boolean),\\s+(?:required|optional)(?:\\s+[—-]\\s+[^\\r\\n]{1,120})?",
+          "workflow description only, optional"
+        ]
+      },
+      {
+        "id": "explicit-secret-template-token",
+        "detectors": [
+          "private_keys",
+          "api_tokens",
+          "access_tokens",
+          "passwords",
+          "connection_strings",
+          "webhook_secrets",
+          "real_secret_values_from_ci_secret_corpus"
+        ],
+        "paths": [
+          "/**"
+        ],
+        "patterns": [
+          "<[A-Z][A-Z0-9_]{2,63}>",
+          "__[A-Z][A-Z0-9_]{2,63}__"
+        ]
+      }
+    ],
+    "approved_business_contacts": [
+      {
+        "id": "waitlist-sender-business-email",
+        "detectors": [
+          "email_address_values"
+        ],
+        "paths": [
+          "/waitlist/Code.gs"
+        ],
+        "value_sha256s": [
+          "d1dc757c784d3861d6472251343804d7686376c6974e03daa9bddd0499381aaf"
+        ]
+      }
+    ]
+  },
   "url_policy": {
     "parse_embedded_urls_in": [
       "text",
@@ -507,7 +577,7 @@
       "redirect_targets_and_canonical_urls"
     ],
     "coverage_rule": "Every file destined for publication must produce a scanned, approved, or denied coverage record. Unsupported, unreadable, encrypted, truncated, or skipped files fail closed.",
-    "artifact_rule": "Generated artifacts must be scanned after generation and before upload. A clean source scan never substitutes for the generated-artifact scan.",
+    "artifact_rule": "Generated artifacts must be built from exact commit-tree blobs and modes, scanned after generation, sealed into a deterministic Pages artifact.tar, and hash-validated immediately before upload. A clean source scan never substitutes for the generated-artifact scan.",
     "pass_condition": "All files match an allowed path category, all required detectors complete, no deny rule matches, all URLs pass, and generated-artifact coverage is complete."
   },
   "evidence_behavior": {
@@ -522,6 +592,9 @@
       "policy_sha256",
       "repository",
       "commit_sha",
+      "source_manifest_sha256",
+      "manifest_sha256",
+      "payload_sha256",
       "scan_started_at",
       "scan_completed_at",
       "scanner_name",
@@ -535,6 +608,8 @@
     "coverage_record_fields": [
       "path",
       "sha256",
+      "git_blob_id",
+      "git_mode",
       "media_type",
       "origin",
       "category",
@@ -558,6 +633,6 @@
     "on_pass": "Permit the publication gate to continue and retain the evidence record.",
     "on_deny": "Block publication, quarantine or delete the candidate generated artifact, emit only redacted violation metadata, and retain private evidence for remediation.",
     "on_error": "Block publication. Scanner errors, missing evidence, stale evidence, incomplete coverage, and unknown classifications are denials.",
-    "evidence_freshness": "Evidence is valid only for the exact policy SHA-256, commit SHA, and generated artifact hashes recorded by that scan."
+    "evidence_freshness": "Evidence is valid only for the exact policy SHA-256, source-manifest SHA-256, commit SHA, Git blob IDs and modes, generated artifact hashes, and sealed Pages payload SHA-256 recorded by that scan."
   }
 }

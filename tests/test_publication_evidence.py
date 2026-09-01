@@ -63,6 +63,7 @@ class PublicationEvidenceTests(unittest.TestCase):
         for relative in (
             publication_artifact.MANIFEST_FILENAME,
             publication_artifact.POLICY_FILENAME,
+            validate_publication_evidence.SOURCE_MANIFEST_FILENAME,
             *manifest.paths,
         ):
             destination = source / relative
@@ -72,40 +73,66 @@ class PublicationEvidenceTests(unittest.TestCase):
 
     def built_evidence(
         self,
-    ) -> tuple[Path, Path, Path, str, dict[str, object]]:
+    ) -> tuple[Path, Path, Path, Path, str, dict[str, object]]:
         source, commit = self.artifact_source()
         artifact = self.work / "artifact"
+        payload_dir = self.work / "payload"
+        payload_dir.mkdir()
+        payload = payload_dir / "artifact.tar"
         evidence_path = self.work / "artifact-evidence.json"
-        publication_artifact.build_artifact(source, artifact)
-        evidence = publication_artifact.scan_artifact(source, artifact)
+        evidence = publication_artifact.build_scan_seal(
+            source, artifact, payload
+        )
         evidence_path.write_text(
             publication_artifact._render_json(evidence, compact=True),
             encoding="utf-8",
         )
-        return source, artifact, evidence_path, commit, evidence
+        return source, artifact, payload, evidence_path, commit, evidence
 
     def built_source_evidence(
         self,
-    ) -> tuple[Path, Path, Path, dict[str, object]]:
+    ) -> tuple[Path, Path, Path, str, dict[str, object]]:
         source = self.work / "source"
         source.mkdir()
+        policy = {
+            "policy_id": "fixture/source-evidence",
+            "policy_version": "1.0.0",
+            "repository": "fixture/source-evidence",
+            "source_tree_classification": {
+                "default_class": "repository-source-nondeploy",
+                "artifact_manifest": "PUBLICATION-MANIFEST.json",
+                "path_rules": [],
+            },
+        }
         (source / "PUBLICATION-POLICY.json").write_text(
             json.dumps(
-                {
-                    "policy_id": "fixture/source-evidence",
-                    "policy_version": "1.0.0",
-                    "repository": "fixture/source-evidence",
-                }
+                policy
             ),
             encoding="utf-8",
         )
         (source / "safe.txt").write_text("safe public source\n", encoding="utf-8")
+        (source / "PUBLICATION-MANIFEST.json").write_text(
+            json.dumps(
+                {
+                    "artifact_boundary": publication_artifact.ARTIFACT_BOUNDARY,
+                    "default_disposition": "deny",
+                    "document_type": "publication-manifest",
+                    "max_file_bytes": 5 * 1024 * 1024,
+                    "paths": [{"class": "site-content", "path": "safe.txt"}],
+                    "repository": "fixture/source-evidence",
+                    "schema_version": 1,
+                    "site_hosts": ["example.com"],
+                    "allowed_external_origins": [],
+                }
+            ),
+            encoding="utf-8",
+        )
         manifest = {
             "artifact_boundary": publication_artifact.ARTIFACT_BOUNDARY,
             "default_disposition": "deny",
             "document_type": "publication-source-manifest",
             "files": ["safe.txt"],
-            "repository": "kody-w/rapterbox-site",
+            "repository": "fixture/source-evidence",
             "schema_version": 1,
             "source_classes": [
                 {
@@ -117,6 +144,7 @@ class PublicationEvidenceTests(unittest.TestCase):
         }
         manifest_path = source / validate_publication_evidence.SOURCE_MANIFEST_FILENAME
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        commit = self.commit_source(source)
         evidence_path = self.work / "source-evidence.json"
         exit_code = publication_guard.main(
             [
@@ -132,7 +160,7 @@ class PublicationEvidenceTests(unittest.TestCase):
             ]
         )
         self.assertEqual(0, exit_code)
-        return source, manifest_path, evidence_path, json.loads(
+        return source, manifest_path, evidence_path, commit, json.loads(
             evidence_path.read_text(encoding="utf-8")
         )
 
@@ -236,19 +264,27 @@ class PublicationEvidenceTests(unittest.TestCase):
             actions["gitguardian-rappid-disposition"]["disable_scanning"]
         )
         self.assertEqual("blocked", handoff["history_rewrite"]["state"])
+        self.assertFalse(
+            handoff["history_rewrite"]["current_tree_or_deployment_exception"]
+        )
 
     def test_valid_source_evidence_is_complete_and_outside_source(self) -> None:
-        source, manifest_path, evidence_path, _ = self.built_source_evidence()
+        source, manifest_path, evidence_path, commit, _ = self.built_source_evidence()
         result = validate_publication_evidence.validate_source_evidence(
             source=source,
             manifest_path=manifest_path,
             evidence_path=evidence_path,
+            expected_commit=commit,
         )
 
-        self.assertEqual({"source_file_count": 1}, result)
+        self.assertEqual(
+            {"commit_sha": commit, "source_file_count": 1}, result
+        )
 
     def test_rejects_source_coverage_and_count_drift(self) -> None:
-        source, manifest_path, evidence_path, evidence = self.built_source_evidence()
+        source, manifest_path, evidence_path, commit, evidence = (
+            self.built_source_evidence()
+        )
         mutations = []
 
         bad_count = copy.deepcopy(evidence)
@@ -270,14 +306,55 @@ class PublicationEvidenceTests(unittest.TestCase):
                         source=source,
                         manifest_path=manifest_path,
                         evidence_path=evidence_path,
+                        expected_commit=commit,
+                    )
+
+    def test_rejects_fabricated_source_hashes_and_stale_bindings(self) -> None:
+        source, manifest_path, evidence_path, commit, evidence = (
+            self.built_source_evidence()
+        )
+        mutations = []
+
+        fabricated_hash = copy.deepcopy(evidence)
+        fabricated_hash["coverage_records"][0]["sha256"] = "0" * 64
+        mutations.append((fabricated_hash, commit))
+
+        stale_policy = copy.deepcopy(evidence)
+        stale_policy["policy_sha256"] = "1" * 64
+        mutations.append((stale_policy, commit))
+
+        stale_manifest = copy.deepcopy(evidence)
+        stale_manifest["source_manifest_sha256"] = "2" * 64
+        mutations.append((stale_manifest, commit))
+
+        stale_commit = copy.deepcopy(evidence)
+        stale_commit["commit_sha"] = "3" * 40
+        mutations.append((stale_commit, "3" * 40))
+
+        for mutation, expected_commit in mutations:
+            with self.subTest():
+                evidence_path.write_text(
+                    json.dumps(mutation, sort_keys=True), encoding="utf-8"
+                )
+                with self.assertRaises(
+                    validate_publication_evidence.EvidenceError
+                ):
+                    validate_publication_evidence.validate_source_evidence(
+                        source=source,
+                        manifest_path=manifest_path,
+                        evidence_path=evidence_path,
+                        expected_commit=expected_commit,
                     )
 
     def test_valid_artifact_evidence_is_exactly_bound(self) -> None:
-        source, artifact, evidence_path, commit, evidence = self.built_evidence()
+        source, artifact, payload, evidence_path, commit, evidence = (
+            self.built_evidence()
+        )
 
         result = validate_publication_evidence.validate_artifact_evidence(
             source=source,
             artifact=artifact,
+            payload=payload,
             evidence_path=evidence_path,
             expected_commit=commit,
         )
@@ -288,7 +365,9 @@ class PublicationEvidenceTests(unittest.TestCase):
         self.assertEqual(commit, result["commit_sha"])
 
     def test_rejects_findings_stale_links_and_rapp_payload_material(self) -> None:
-        source, artifact, evidence_path, commit, evidence = self.built_evidence()
+        source, artifact, payload, evidence_path, commit, evidence = (
+            self.built_evidence()
+        )
         mutations = []
 
         finding = copy.deepcopy(evidence)
@@ -300,9 +379,9 @@ class PublicationEvidenceTests(unittest.TestCase):
         stale_links["links"] = stale_links["links"][:-1]
         mutations.append(stale_links)
 
-        payload = copy.deepcopy(evidence)
-        payload["payload"] = {"candidate_source": "not allowed"}
-        mutations.append(payload)
+        payload_material = copy.deepcopy(evidence)
+        payload_material["payload"] = {"candidate_source": "not allowed"}
+        mutations.append(payload_material)
 
         for mutation in mutations:
             with self.subTest():
@@ -314,16 +393,20 @@ class PublicationEvidenceTests(unittest.TestCase):
                     validate_publication_evidence.validate_artifact_evidence(
                         source=source,
                         artifact=artifact,
+                        payload=payload,
                         evidence_path=evidence_path,
                         expected_commit=commit,
                     )
 
     def test_rejects_wrong_commit_artifact_mutation_and_evidence_overlap(self) -> None:
-        source, artifact, evidence_path, commit, evidence = self.built_evidence()
+        source, artifact, payload, evidence_path, commit, evidence = (
+            self.built_evidence()
+        )
         with self.assertRaises(validate_publication_evidence.EvidenceError):
             validate_publication_evidence.validate_artifact_evidence(
                 source=source,
                 artifact=artifact,
+                payload=payload,
                 evidence_path=evidence_path,
                 expected_commit="0" * 40,
             )
@@ -333,6 +416,7 @@ class PublicationEvidenceTests(unittest.TestCase):
             validate_publication_evidence.validate_artifact_evidence(
                 source=source,
                 artifact=artifact,
+                payload=payload,
                 evidence_path=evidence_path,
                 expected_commit=commit,
             )
@@ -343,7 +427,31 @@ class PublicationEvidenceTests(unittest.TestCase):
             validate_publication_evidence.validate_artifact_evidence(
                 source=source,
                 artifact=artifact,
+                payload=payload,
                 evidence_path=overlap_path,
+                expected_commit=commit,
+            )
+
+    def test_final_payload_validation_rejects_tar_substitution(self) -> None:
+        source, artifact, payload, evidence_path, commit, _ = (
+            self.built_evidence()
+        )
+        result = validate_publication_evidence.validate_artifact_evidence(
+            source=source,
+            artifact=None,
+            payload=payload,
+            evidence_path=evidence_path,
+            expected_commit=commit,
+        )
+        self.assertEqual(31, result["artifact_count"])
+
+        payload.write_bytes(b"not the validated pages tar")
+        with self.assertRaises(validate_publication_evidence.EvidenceError):
+            validate_publication_evidence.validate_artifact_evidence(
+                source=source,
+                artifact=None,
+                payload=payload,
+                evidence_path=evidence_path,
                 expected_commit=commit,
             )
 

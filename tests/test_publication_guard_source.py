@@ -481,6 +481,124 @@ class PublicationGuardSourceTests(unittest.TestCase):
         for value in values.values():
             self.assertNotIn(value, rendered)
 
+    def test_structured_json_traversal_denies_encoded_keys_arrays_and_customer_shapes(
+        self,
+    ) -> None:
+        self.write(
+            publication_guard.POLICY_FILENAME,
+            (REPOSITORY_ROOT / publication_guard.POLICY_FILENAME).read_bytes(),
+        )
+        sensitive = {
+            "pass%77ord": "short-real-value",
+            "nested": [
+                {
+                    "api&#95;key": "another-real-value",
+                    "customer": {
+                        "name": "Submitted Person",
+                        "phones": ["2125550199"],
+                        "address": {"street": "123 Main Street"},
+                        "customerId": "customer-real-123",
+                    },
+                }
+            ],
+        }
+        self.write("submitted.json", json.dumps(sensitive))
+
+        report = publication_guard.scan_repository(
+            self.root,
+            manifest=["submitted.json"],
+            enforce_source_classification=False,
+        )
+
+        detectors = {
+            finding["detector"]
+            for finding in report["findings"]
+            if finding["rule"] == "structured_data_violation"
+        }
+        self.assertTrue(
+            {
+                "passwords",
+                "api_tokens",
+                "submitted_names",
+                "phone_number_values",
+                "postal_address_values",
+                "customer_or_account_identifiers",
+            }
+            <= detectors
+        )
+        rendered = json.dumps(report)
+        for value in (
+            "short-real-value",
+            "another-real-value",
+            "Submitted Person",
+            "2125550199",
+            "123 Main Street",
+            "customer-real-123",
+        ):
+            self.assertNotIn(value, rendered)
+
+    def test_structured_json_and_jsonl_parse_failures_fail_closed(self) -> None:
+        self.write(
+            publication_guard.POLICY_FILENAME,
+            (REPOSITORY_ROOT / publication_guard.POLICY_FILENAME).read_bytes(),
+        )
+        self.write("duplicate.json", '{"key":1,"key":2}\n')
+        self.write("invalid.jsonl", '{"ok":true}\n{"broken":\n')
+        self.write("nonstandard.json", '{"value":NaN}\n')
+
+        report = publication_guard.scan_repository(
+            self.root,
+            manifest=["duplicate.json", "invalid.jsonl", "nonstandard.json"],
+            enforce_source_classification=False,
+        )
+
+        self.assertEqual(
+            3, self.rules(report).count("invalid_structured_data")
+        )
+
+    def test_operational_contact_exceptions_are_exact_and_placeholders_are_narrow(
+        self,
+    ) -> None:
+        self.write(
+            publication_guard.POLICY_FILENAME,
+            (REPOSITORY_ROOT / publication_guard.POLICY_FILENAME).read_bytes(),
+        )
+        approved = "wildhavenhomesllc" + "@" + "gmail.com"
+        real_customer = "submitted-person" + "@" + "example.test"
+        self.write("waitlist/Code.gs", approved + "\n")
+        self.write("waitlist/other.gs", real_customer + "\n")
+        self.write(
+            "agent.json",
+            json.dumps(
+                {
+                    "access_token": "<ACCESS_TOKEN>",
+                    "fields": {
+                        "email": "string, required",
+                        "phone": "string, optional",
+                    },
+                }
+            ),
+        )
+
+        report = publication_guard.scan_repository(
+            self.root,
+            manifest=["waitlist/Code.gs", "waitlist/other.gs", "agent.json"],
+            enforce_source_classification=False,
+        )
+
+        findings_by_path = {
+            finding["path"]: finding for finding in report["findings"]
+        }
+        self.assertNotIn("waitlist/Code.gs", findings_by_path)
+        self.assertNotIn("agent.json", findings_by_path)
+        self.assertEqual(
+            "sensitive_data_shape",
+            findings_by_path["waitlist/other.gs"]["rule"],
+        )
+        serialized = json.dumps(report)
+        self.assertNotIn(approved, serialized)
+        self.assertNotIn(real_customer, serialized)
+
     def test_real_secret_still_fails_in_synthetic_control_input(self) -> None:
         self.write_policy(
             {

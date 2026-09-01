@@ -154,6 +154,58 @@ class PublicIpAuditTests(unittest.TestCase):
                 with self.assertRaises(audit.AuditInputError):
                     audit.validate_public_url(value)
 
+    def test_malformed_bracket_url_is_redacted_and_does_not_abort_valid_inputs(
+        self,
+    ) -> None:
+        valid = "https://example.com/current"
+        malformed = "https://[broken"
+        transport = self.fixture_transport(
+            {valid: {"status": 200, "body": "public"}}
+        )
+
+        artifacts = [
+            audit.classify_url(malformed, transport),
+            audit.classify_url(valid, transport),
+        ]
+
+        self.assertEqual(
+            ["probe-error", "reachable-current"],
+            [artifact.classification for artifact in artifacts],
+        )
+        serialized = json.dumps([artifact.to_dict() for artifact in artifacts])
+        self.assertNotIn(malformed, serialized)
+        self.assertIn("redacted-url:", artifacts[0].source)
+
+    def test_link_document_malformed_extracted_url_is_a_sanitized_probe_error(
+        self,
+    ) -> None:
+        document = "https://links.example.org/index.html"
+        forbidden = "https://example.com/removed"
+        body = f"{forbidden}\nhttps://[broken"
+        transport = self.fixture_transport(
+            {document: {"status": 200, "body": body}}
+        )
+
+        artifact = audit.classify_link_document(
+            document, [forbidden], transport
+        )
+
+        self.assertEqual("probe-error", artifact.classification)
+        self.assertEqual("malformed-extracted-url", artifact.detail)
+        self.assertEqual((forbidden,), artifact.matches)
+        self.assertNotIn("https://[broken", json.dumps(artifact.to_dict()))
+
+    def test_invalid_utf8_fixture_and_search_json_use_safe_input_errors(self) -> None:
+        fixture = self.work / "fixture.json"
+        search = self.work / "search.json"
+        fixture.write_bytes(b'{"responses":' + b"\xff")
+        search.write_bytes(b'[{"url":' + b"\xff")
+
+        with self.assertRaisesRegex(audit.AuditInputError, "invalid JSON input"):
+            audit.load_fixture(fixture)
+        with self.assertRaisesRegex(audit.AuditInputError, "invalid JSON input"):
+            audit.classify_search_results(search, [])
+
     def test_offline_cli_writes_deterministic_json_and_markdown(self) -> None:
         target = "https://example.com/removed"
         document = "https://links.example.org/index.html"

@@ -29,7 +29,7 @@ POLICY_FILENAME = "PUBLICATION-POLICY.json"
 MANIFEST_FILENAME = "PUBLICATION-MANIFEST.json"
 DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024
 SCANNER_NAME = "rapterbox-publication-source"
-SCANNER_VERSION = "1.1.0"
+SCANNER_VERSION = "1.2.0"
 ARTIFACT_BOUNDARY = (
     "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts"
 )
@@ -64,7 +64,40 @@ _ALLOWED_REPOSITORY_KEYS = {"allowed_repository_slugs_case_insensitive"}
 _REPOSITORY_HOST_KEYS = {"repository_hosts_case_insensitive"}
 _FORBIDDEN_HOST_KEYS = {"forbidden_hosts_case_insensitive"}
 _FORBIDDEN_HOST_SUFFIX_KEYS = {"forbidden_host_suffixes_case_insensitive"}
-
+_SUPPORTED_STRUCTURED_DETECTORS = frozenset(
+    (
+        "access_tokens",
+        "api_tokens",
+        "connection_strings",
+        "contracts_not_intentionally_published_as_customer_facing_terms",
+        "customer_notes",
+        "customer_or_account_identifiers",
+        "email_address_values",
+        "government_identifiers",
+        "legal_matter_records",
+        "passwords",
+        "phone_number_values",
+        "postal_address_values",
+        "private_keys",
+        "privileged_communications",
+        "real_secret_values_from_ci_secret_corpus",
+        "signatures",
+        "submitted_names",
+        "waitlist_submission_records",
+        "webhook_secrets",
+    )
+)
+_SECRET_STRUCTURED_DETECTORS = frozenset(
+    (
+        "access_tokens",
+        "api_tokens",
+        "connection_strings",
+        "passwords",
+        "private_keys",
+        "real_secret_values_from_ci_secret_corpus",
+        "webhook_secrets",
+    )
+)
 _OWNERSHIP_PATTERNS = (
     re.compile(
         r"\b(?:own(?:s|ed|ership)?|equity|stake|share|interest)\b"
@@ -227,6 +260,10 @@ class _DuplicateJsonKey(ValueError):
     pass
 
 
+class _InvalidJsonConstant(ValueError):
+    pass
+
+
 def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for key, item in pairs:
@@ -234,6 +271,10 @@ def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise _DuplicateJsonKey
         value[key] = item
     return value
+
+
+def _reject_json_constant(_: str) -> None:
+    raise _InvalidJsonConstant
 
 
 @dataclass(frozen=True)
@@ -251,6 +292,11 @@ class Policy:
     source_default_class: str = "repository-source"
     source_manifest: str | None = None
     source_classification_rules: tuple["SourceClassificationRule", ...] = ()
+    structured_detectors: tuple["StructuredDetector", ...] = ()
+    structured_max_depth: int = 32
+    structured_max_items: int = 10000
+    structured_key_decode_passes: int = 2
+    structured_allowances: tuple["StructuredAllowance", ...] = ()
     max_file_bytes: int = DEFAULT_MAX_FILE_BYTES
 
 
@@ -268,6 +314,30 @@ class SourceClassificationRule:
     classification: str
     content_contract: str
     artifact_disposition: str
+
+
+@dataclass(frozen=True)
+class GitSourceEntry:
+    path: str
+    mode: str
+    object_type: str
+    object_id: str
+
+
+@dataclass(frozen=True)
+class StructuredDetector:
+    identifier: str
+    detect: tuple[str, ...]
+    allow_placeholders: bool
+
+
+@dataclass(frozen=True)
+class StructuredAllowance:
+    identifier: str
+    detectors: tuple[str, ...]
+    paths: tuple[str, ...]
+    patterns: tuple[re.Pattern[str], ...]
+    value_sha256s: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -443,45 +513,165 @@ def _source_classification_contract(
     return default_class, manifest, tuple(rules)
 
 
-def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tuple[Policy, Path | None]:
-    explicit = policy_path is not None
-    path = Path(policy_path) if explicit else root / POLICY_FILENAME
-    if not path.is_absolute():
-        path = root / path
-    if not path.exists():
-        if explicit:
-            raise GuardError("the requested policy file does not exist")
-        return Policy(), None
-    try:
-        relative_policy = Path(os.path.abspath(path)).relative_to(root)
-    except ValueError:
-        relative_policy = None
-    if relative_policy is not None and _first_symlink(root, relative_policy) is not None:
-        raise GuardError("the policy path must not contain symlinks")
-    try:
-        metadata = path.lstat()
-    except OSError as error:
-        raise GuardError("the policy path could not be inspected") from error
-    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
-        raise GuardError("the policy path is not a regular file")
-    if metadata.st_size > DEFAULT_MAX_FILE_BYTES:
-        raise GuardError("the policy file is too large")
+def _structured_contract(
+    document: dict[str, Any],
+) -> tuple[
+    tuple[StructuredDetector, ...],
+    int,
+    int,
+    int,
+    tuple[StructuredAllowance, ...],
+]:
+    public_forbidden = document.get("public_forbidden")
+    raw_detectors = (
+        public_forbidden.get("structured_data_detectors")
+        if isinstance(public_forbidden, dict)
+        else None
+    )
+    if raw_detectors is None:
+        return (), 32, 10000, 2, ()
+    if not isinstance(raw_detectors, list) or not raw_detectors:
+        raise GuardError("structured_data_detectors must be a non-empty list")
 
-    try:
-        document = json.loads(
-            path.read_text(encoding="utf-8"), object_pairs_hook=_json_object
+    detectors: list[StructuredDetector] = []
+    seen_ids: set[str] = set()
+    declared: set[str] = set()
+    for index, raw in enumerate(raw_detectors):
+        if (
+            not isinstance(raw, dict)
+            or raw.get("action") != "deny"
+            or not isinstance(raw.get("id"), str)
+            or not raw["id"]
+            or not isinstance(raw.get("detect"), list)
+            or not raw["detect"]
+            or not all(isinstance(item, str) and item for item in raw["detect"])
+            or not isinstance(raw.get("allow_placeholders", False), bool)
+        ):
+            raise GuardError("structured_data_detectors contains an invalid entry")
+        identifier = raw["id"]
+        if identifier in seen_ids:
+            raise GuardError("structured_data_detectors contains duplicate ids")
+        detects = tuple(raw["detect"])
+        if len(set(detects)) != len(detects):
+            raise GuardError("structured_data_detectors contains duplicate detectors")
+        unsupported = set(detects) - _SUPPORTED_STRUCTURED_DETECTORS
+        if unsupported or declared.intersection(detects):
+            raise GuardError("structured_data_detectors contains unsupported detectors")
+        seen_ids.add(identifier)
+        declared.update(detects)
+        detectors.append(
+            StructuredDetector(
+                identifier=identifier,
+                detect=detects,
+                allow_placeholders=raw.get("allow_placeholders", False),
+            )
         )
-    except UnicodeDecodeError as error:
-        raise GuardError("the policy file is not UTF-8 text") from error
-    except _DuplicateJsonKey as error:
-        raise GuardError("the policy file contains duplicate JSON keys") from error
-    except json.JSONDecodeError as error:
-        raise GuardError(
-            f"the policy file is invalid JSON at line {error.lineno}, column {error.colno}"
-        ) from error
-    if not isinstance(document, dict):
-        raise GuardError("the policy document must be a JSON object")
 
+    controls = document.get("structured_data_enforcement")
+    if not isinstance(controls, dict):
+        raise GuardError("structured_data_enforcement is required")
+    maximum_depth = controls.get("maximum_nesting_depth")
+    maximum_items = controls.get("maximum_collection_items")
+    decode_passes = controls.get("encoded_key_decoding_passes")
+    if (
+        isinstance(maximum_depth, bool)
+        or not isinstance(maximum_depth, int)
+        or not 1 <= maximum_depth <= 128
+        or isinstance(maximum_items, bool)
+        or not isinstance(maximum_items, int)
+        or not 1 <= maximum_items <= 1000000
+        or isinstance(decode_passes, bool)
+        or not isinstance(decode_passes, int)
+        or not 0 <= decode_passes <= 4
+    ):
+        raise GuardError("structured_data_enforcement limits are invalid")
+
+    raw_normalization = controls.get("key_normalization")
+    expected_normalization = [
+        "unicode_nfkc",
+        "decode_html_entities",
+        "percent_decode",
+        "remove_zero_width",
+        "split_camel_case",
+        "collapse_non_alphanumeric",
+    ]
+    if raw_normalization != expected_normalization:
+        raise GuardError("structured_data_enforcement key normalization is invalid")
+
+    allowances: list[StructuredAllowance] = []
+    allowance_ids: set[str] = set()
+    for section in ("approved_placeholders", "approved_business_contacts"):
+        raw_allowances = controls.get(section, [])
+        if not isinstance(raw_allowances, list):
+            raise GuardError("structured data allowances must be lists")
+        for raw in raw_allowances:
+            if (
+                not isinstance(raw, dict)
+                or not isinstance(raw.get("id"), str)
+                or not raw["id"]
+                or not isinstance(raw.get("detectors"), list)
+                or not raw["detectors"]
+                or not all(
+                    isinstance(item, str) and item in declared
+                    for item in raw["detectors"]
+                )
+                or not isinstance(raw.get("paths"), list)
+                or not raw["paths"]
+                or not all(
+                    isinstance(path, str)
+                    and path.startswith("/")
+                    and "\0" not in path
+                    for path in raw["paths"]
+                )
+            ):
+                raise GuardError("structured data allowance is invalid")
+            identifier = raw["id"]
+            if identifier in allowance_ids:
+                raise GuardError("structured data allowance ids must be unique")
+            allowance_ids.add(identifier)
+            expressions = raw.get("patterns", [])
+            fingerprints = raw.get("value_sha256s", [])
+            if (
+                not isinstance(expressions, list)
+                or not all(isinstance(item, str) and item for item in expressions)
+                or not isinstance(fingerprints, list)
+                or not all(
+                    isinstance(item, str)
+                    and re.fullmatch(r"[0-9a-f]{64}", item) is not None
+                    for item in fingerprints
+                )
+                or (not expressions and not fingerprints)
+            ):
+                raise GuardError("structured data allowance values are invalid")
+            compiled: list[re.Pattern[str]] = []
+            for expression in expressions:
+                try:
+                    compiled.append(re.compile(expression, re.IGNORECASE))
+                except re.error as error:
+                    raise GuardError(
+                        "structured data allowance contains an invalid expression"
+                    ) from error
+            allowances.append(
+                StructuredAllowance(
+                    identifier=identifier,
+                    detectors=tuple(sorted(set(raw["detectors"]))),
+                    paths=tuple(
+                        sorted(set(raw["paths"]), key=lambda item: item.casefold())
+                    ),
+                    patterns=tuple(compiled),
+                    value_sha256s=tuple(sorted(set(fingerprints))),
+                )
+            )
+    return (
+        tuple(detectors),
+        maximum_depth,
+        maximum_items,
+        decode_passes,
+        tuple(allowances),
+    )
+
+
+def _policy_from_document(document: dict[str, Any]) -> Policy:
     filenames = _as_entries(
         _find_policy_values(document, _FILENAME_KEYS),
         ("pattern", "filename", "path", "name"),
@@ -534,6 +724,13 @@ def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tupl
         source_manifest,
         source_classification_rules,
     ) = _source_classification_contract(document)
+    (
+        structured_detectors,
+        structured_max_depth,
+        structured_max_items,
+        structured_key_decode_passes,
+        structured_allowances,
+    ) = _structured_contract(document)
 
     maximums = _find_policy_values(document, _MAX_FILE_KEYS)
     max_file_bytes = DEFAULT_MAX_FILE_BYTES
@@ -543,25 +740,77 @@ def _load_policy(root: Path, policy_path: str | os.PathLike[str] | None) -> tupl
             raise GuardError("max_file_bytes must be a positive integer")
         max_file_bytes = value
 
-    return (
-        Policy(
-            forbidden_filenames=filenames,
-            forbidden_filename_patterns=filename_patterns,
-            forbidden_phrases=phrases,
-            forbidden_phrase_patterns=phrase_patterns,
-            private_repositories=repositories,
-            allowed_repository_slugs=allowed_repositories,
-            repository_hosts=repository_hosts,
-            forbidden_hosts=forbidden_hosts,
-            forbidden_host_suffixes=forbidden_host_suffixes,
-            forbidden_repository_slug_patterns=forbidden_repository_patterns,
-            source_default_class=source_default_class,
-            source_manifest=source_manifest,
-            source_classification_rules=source_classification_rules,
-            max_file_bytes=max_file_bytes,
-        ),
-        path.resolve(),
+    return Policy(
+        forbidden_filenames=filenames,
+        forbidden_filename_patterns=filename_patterns,
+        forbidden_phrases=phrases,
+        forbidden_phrase_patterns=phrase_patterns,
+        private_repositories=repositories,
+        allowed_repository_slugs=allowed_repositories,
+        repository_hosts=repository_hosts,
+        forbidden_hosts=forbidden_hosts,
+        forbidden_host_suffixes=forbidden_host_suffixes,
+        forbidden_repository_slug_patterns=forbidden_repository_patterns,
+        source_default_class=source_default_class,
+        source_manifest=source_manifest,
+        source_classification_rules=source_classification_rules,
+        structured_detectors=structured_detectors,
+        structured_max_depth=structured_max_depth,
+        structured_max_items=structured_max_items,
+        structured_key_decode_passes=structured_key_decode_passes,
+        structured_allowances=structured_allowances,
+        max_file_bytes=max_file_bytes,
     )
+
+
+def _decode_policy_data(data: bytes) -> tuple[dict[str, Any], Policy]:
+    try:
+        document = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except UnicodeDecodeError as error:
+        raise GuardError("the policy file is not UTF-8 text") from error
+    except (_DuplicateJsonKey, _InvalidJsonConstant) as error:
+        raise GuardError("the policy file contains duplicate JSON keys") from error
+    except json.JSONDecodeError as error:
+        raise GuardError(
+            f"the policy file is invalid JSON at line {error.lineno}, column {error.colno}"
+        ) from error
+    if not isinstance(document, dict):
+        raise GuardError("the policy document must be a JSON object")
+    return document, _policy_from_document(document)
+
+
+def _load_policy(
+    root: Path, policy_path: str | os.PathLike[str] | None
+) -> tuple[Policy, Path | None]:
+    explicit = policy_path is not None
+    path = Path(policy_path) if explicit else root / POLICY_FILENAME
+    if not path.is_absolute():
+        path = root / path
+    if not path.exists():
+        if explicit:
+            raise GuardError("the requested policy file does not exist")
+        return Policy(), None
+    try:
+        relative_policy = Path(os.path.abspath(path)).relative_to(root)
+    except ValueError:
+        relative_policy = None
+    if relative_policy is not None and _first_symlink(root, relative_policy) is not None:
+        raise GuardError("the policy path must not contain symlinks")
+    try:
+        metadata = path.lstat()
+        data = path.read_bytes()
+    except OSError as error:
+        raise GuardError("the policy path could not be inspected") from error
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+        raise GuardError("the policy path is not a regular file")
+    if metadata.st_size > DEFAULT_MAX_FILE_BYTES:
+        raise GuardError("the policy file is too large")
+    _, policy = _decode_policy_data(data)
+    return policy, path.resolve()
 
 
 def _read_manifest(path: Path) -> list[str]:
@@ -576,9 +825,16 @@ def _read_manifest(path: Path) -> list[str]:
     if stripped.startswith((b"[", b"{")):
         try:
             document = json.loads(
-                raw.decode("utf-8"), object_pairs_hook=_json_object
+                raw.decode("utf-8"),
+                object_pairs_hook=_json_object,
+                parse_constant=_reject_json_constant,
             )
-        except (UnicodeDecodeError, json.JSONDecodeError, _DuplicateJsonKey) as error:
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+            _DuplicateJsonKey,
+            _InvalidJsonConstant,
+        ) as error:
             raise GuardError("the manifest is not valid UTF-8 JSON") from error
         if isinstance(document, dict):
             document = document.get("paths", document.get("files"))
@@ -613,6 +869,79 @@ def _git_paths(root: Path) -> list[str]:
     return [os.fsdecode(item) for item in result.stdout.split(b"\0") if item]
 
 
+def _git_head_context(
+    root: Path,
+) -> tuple[str, dict[str, GitSourceEntry]] | None:
+    try:
+        top = subprocess.run(
+            ["git", "-C", os.fspath(root), "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        commit = subprocess.run(
+            ["git", "-C", os.fspath(root), "rev-parse", "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as error:
+        raise GuardError("git could not be executed") from error
+    if top.returncode or commit.returncode:
+        return None
+    try:
+        if Path(top.stdout.strip()).resolve(strict=True) != root:
+            return None
+    except OSError as error:
+        raise GuardError("the Git root could not be resolved") from error
+    commit_sha = commit.stdout.strip()
+    if re.fullmatch(r"[0-9a-f]{40,64}", commit_sha) is None:
+        raise GuardError("the Git commit is invalid")
+    tree = subprocess.run(
+        ["git", "-C", os.fspath(root), "ls-tree", "-rz", "--full-tree", commit_sha],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if tree.returncode:
+        raise GuardError("the Git tree could not be read")
+    entries: dict[str, GitSourceEntry] = {}
+    for raw in tree.stdout.split(b"\0"):
+        if not raw:
+            continue
+        try:
+            metadata, raw_path = raw.split(b"\t", 1)
+            raw_mode, raw_type, raw_object = metadata.split(b" ", 2)
+            path = raw_path.decode("utf-8")
+            mode = raw_mode.decode("ascii")
+            object_type = raw_type.decode("ascii")
+            object_id = raw_object.decode("ascii")
+        except (UnicodeDecodeError, ValueError) as error:
+            raise GuardError("the Git tree is invalid") from error
+        entries[path] = GitSourceEntry(path, mode, object_type, object_id)
+    return commit_sha, entries
+
+
+def _git_blob(root: Path, entry: GitSourceEntry, maximum: int) -> bytes:
+    if entry.object_type != "blob" or entry.mode not in {"100644", "100755"}:
+        raise GuardError("a selected Git path is not a regular file")
+    result = subprocess.run(
+        ["git", "-C", os.fspath(root), "cat-file", "blob", entry.object_id],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode:
+        raise GuardError("a selected Git blob could not be read")
+    if len(result.stdout) > maximum:
+        raise GuardError("a selected Git blob is too large")
+    return result.stdout
+
+
+def _git_worktree_mode(mode: int) -> str:
+    return "100755" if mode & 0o111 else "100644"
+
+
 def _manifest_paths(
     root: Path,
     manifest: Iterable[str] | str | os.PathLike[str] | None,
@@ -629,6 +958,52 @@ def _manifest_paths(
         if not all(isinstance(path, str) for path in paths):
             raise GuardError("manifest paths must be strings")
     return sorted(set(paths), key=lambda path: (path.casefold(), path))
+
+
+def _source_manifest_classes(
+    root: Path,
+    manifest: Iterable[str] | str | os.PathLike[str] | None,
+) -> tuple[dict[str, str], str | None]:
+    if not isinstance(manifest, (str, os.PathLike)):
+        return {}, None
+    manifest_path = Path(manifest)
+    if not manifest_path.is_absolute():
+        manifest_path = root / manifest_path
+    try:
+        data = manifest_path.read_bytes()
+        document = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        _DuplicateJsonKey,
+        _InvalidJsonConstant,
+    ):
+        return {}, None
+    if (
+        not isinstance(document, dict)
+        or document.get("document_type") != "publication-source-manifest"
+        or not isinstance(document.get("source_classes"), list)
+    ):
+        return {}, None
+    classes: dict[str, str] = {}
+    for group in document["source_classes"]:
+        if (
+            not isinstance(group, dict)
+            or not isinstance(group.get("class"), str)
+            or not isinstance(group.get("paths"), list)
+            or not all(isinstance(path, str) for path in group["paths"])
+        ):
+            raise GuardError("the source manifest classification is invalid")
+        for path in group["paths"]:
+            if path in classes:
+                raise GuardError("the source manifest classification overlaps")
+            classes[path] = group["class"]
+    return classes, hashlib.sha256(data).hexdigest()
 
 
 def _is_absolute_or_traversal(path: str) -> bool:
@@ -832,7 +1207,9 @@ def _artifact_manifest_entries(root: Path, policy: Policy) -> dict[str, str]:
         if metadata.st_size > DEFAULT_MAX_FILE_BYTES:
             raise GuardError("the artifact manifest is too large")
         document = json.loads(
-            path.read_text(encoding="utf-8"), object_pairs_hook=_json_object
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_json_object,
+            parse_constant=_reject_json_constant,
         )
     except GuardError:
         raise
@@ -841,6 +1218,7 @@ def _artifact_manifest_entries(root: Path, policy: Policy) -> dict[str, str]:
         UnicodeDecodeError,
         json.JSONDecodeError,
         _DuplicateJsonKey,
+        _InvalidJsonConstant,
     ) as error:
         raise GuardError("the artifact manifest is unreadable or invalid") from error
     entries = document.get("paths") if isinstance(document, dict) else None
@@ -886,6 +1264,455 @@ def _media_type(path: str, is_binary: bool) -> str:
     return "application/octet-stream" if is_binary else "text/plain"
 
 
+def _normalise_structured_key(value: str, decode_passes: int) -> str:
+    normalized = unicodedata.normalize("NFKC", html.unescape(value)).translate(
+        _ZERO_WIDTH_CHARACTERS
+    )
+    for _ in range(decode_passes):
+        if _INVALID_PERCENT_ESCAPE.search(normalized):
+            break
+        decoded = unquote(normalized)
+        if decoded == normalized:
+            break
+        normalized = unicodedata.normalize(
+            "NFKC", html.unescape(decoded)
+        ).translate(_ZERO_WIDTH_CHARACTERS)
+    normalized = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", normalized)
+    return re.sub(r"[^a-z0-9]+", "_", normalized.casefold()).strip("_")
+
+
+def _allowance_matches_path(path: str, patterns: Sequence[str]) -> bool:
+    return any(_source_rule_matches(path, pattern) for pattern in patterns)
+
+
+def _structured_value_allowed(
+    policy: Policy,
+    path: str,
+    detector: str,
+    value: Any,
+) -> bool:
+    if value is None or value == "":
+        return True
+    if not isinstance(value, (str, int, float)):
+        return False
+    rendered = str(value).strip()
+    candidates = {rendered, rendered.strip("\"'")}
+    for allowance in policy.structured_allowances:
+        if (
+            detector in allowance.detectors
+            and _allowance_matches_path(path, allowance.paths)
+            and (
+                any(
+                    hashlib.sha256(candidate.encode("utf-8")).hexdigest()
+                    in allowance.value_sha256s
+                    for candidate in candidates
+                )
+                or any(
+                    pattern.fullmatch(candidate)
+                    for pattern in allowance.patterns
+                    for candidate in candidates
+                )
+            )
+        ):
+            return True
+    return False
+
+
+def _structured_scalar_text(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return str(value)
+    return None
+
+
+def _key_matches(key: str, aliases: set[str]) -> bool:
+    return key in aliases
+
+
+_STRUCTURED_KEY_ALIASES = {
+    "private_keys": {
+        "private_key",
+        "private_key_pem",
+        "ssh_private_key",
+        "signing_private_key",
+    },
+    "api_tokens": {
+        "api_key",
+        "api_secret",
+        "api_token",
+        "client_api_key",
+    },
+    "access_tokens": {
+        "access_token",
+        "auth_token",
+        "bearer_token",
+        "oauth_token",
+        "refresh_token",
+    },
+    "passwords": {"password", "passwd", "passphrase", "pwd"},
+    "connection_strings": {
+        "connection_string",
+        "database_url",
+        "db_connection",
+        "db_url",
+        "jdbc_url",
+    },
+    "webhook_secrets": {
+        "signing_secret",
+        "webhook_key",
+        "webhook_secret",
+        "webhook_token",
+    },
+    "email_address_values": {"email", "email_address", "mail"},
+    "phone_number_values": {
+        "cell",
+        "cell_phone",
+        "mobile",
+        "mobile_phone",
+        "phone",
+        "phone_number",
+        "phones",
+        "telephone",
+    },
+    "postal_address_values": {
+        "address",
+        "address_line",
+        "address_line_1",
+        "address_line_2",
+        "mailing_address",
+        "postal_address",
+        "street",
+        "street_address",
+    },
+    "customer_notes": {
+        "customer_note",
+        "customer_notes",
+        "submitted_note",
+        "waitlist_note",
+    },
+    "customer_or_account_identifiers": {
+        "account_id",
+        "contact_id",
+        "customer_id",
+        "external_customer_id",
+        "subscriber_id",
+        "user_account_id",
+    },
+    "submitted_names": {
+        "contact_name",
+        "customer_name",
+        "first_name",
+        "full_name",
+        "last_name",
+        "submitted_name",
+    },
+    "privileged_communications": {
+        "attorney_client",
+        "privileged_communication",
+        "privileged_message",
+    },
+    "legal_matter_records": {
+        "case_number",
+        "legal_matter",
+        "legal_matter_id",
+        "matter_number",
+    },
+    "contracts_not_intentionally_published_as_customer_facing_terms": {
+        "contract",
+        "contract_body",
+        "executed_agreement",
+        "private_contract",
+    },
+    "signatures": {
+        "digital_signature",
+        "signature",
+        "signature_value",
+        "signed_by",
+    },
+    "government_identifiers": {
+        "driver_license",
+        "government_id",
+        "national_id",
+        "passport",
+        "passport_number",
+        "social_security_number",
+        "ssn",
+        "tax_id",
+    },
+}
+_CUSTOMER_CONTEXT_KEYS = {
+    "applicant",
+    "contact",
+    "customer",
+    "intake",
+    "lead",
+    "person",
+    "signup",
+    "submission",
+    "subscriber",
+    "waitlist",
+    "waitlist_submission",
+}
+_SUBMISSION_METADATA_KEYS = {
+    "created_at",
+    "submitted_at",
+    "submission_id",
+    "timestamp",
+}
+_EMAIL_VALUE = re.compile(
+    r"^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+    r"[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?"
+    r"(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$",
+    re.IGNORECASE,
+)
+_PHONE_VALUE = re.compile(
+    r"^(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}$"
+)
+_PRIVATE_KEY_VALUE = re.compile(
+    r"-{5}BEGIN [A-Z0-9 ]*PRIVATE KEY-{5}", re.IGNORECASE
+)
+_CONNECTION_VALUE = re.compile(
+    r"(?:AccountKey|SharedAccessKey|ClientSecret|Password)\s*=",
+    re.IGNORECASE,
+)
+_WEBHOOK_VALUE = re.compile(
+    r"https://hooks\.slack\.com/services/", re.IGNORECASE
+)
+
+
+def _structured_detector_match(
+    detector: str,
+    *,
+    path: str,
+    key: str,
+    value: Any,
+    ancestors: tuple[str, ...],
+    object_keys: set[str],
+) -> bool:
+    text = _structured_scalar_text(value)
+    aliases = _STRUCTURED_KEY_ALIASES.get(detector, set())
+    key_match = any(_key_matches(candidate, aliases) for candidate in (key, *ancestors))
+    customer_context = bool(
+        set(ancestors) & _CUSTOMER_CONTEXT_KEYS
+        or object_keys & _CUSTOMER_CONTEXT_KEYS
+        or object_keys
+        & {
+            "email",
+            "email_address",
+            "phone",
+            "phone_number",
+            "customer_id",
+            "account_id",
+        }
+    )
+    if detector == "private_keys":
+        return key_match or bool(text and _PRIVATE_KEY_VALUE.search(text))
+    if detector in {
+        "api_tokens",
+        "access_tokens",
+        "passwords",
+        "connection_strings",
+        "webhook_secrets",
+    }:
+        if key_match:
+            return True
+        if detector == "connection_strings":
+            return bool(text and _CONNECTION_VALUE.search(text))
+        if detector == "webhook_secrets":
+            return bool(text and _WEBHOOK_VALUE.search(text))
+        return False
+    if detector == "real_secret_values_from_ci_secret_corpus":
+        return bool(
+            text
+            and any(
+                category == "secret" and pattern.search(text)
+                for _, category, pattern in _SENSITIVE_PATTERNS
+            )
+        )
+    if detector == "email_address_values":
+        return bool(text and (_EMAIL_VALUE.fullmatch(text) or key_match))
+    if detector == "phone_number_values":
+        return bool(text and (key_match or _PHONE_VALUE.fullmatch(text)))
+    if detector == "postal_address_values":
+        return bool(text and key_match)
+    if detector == "customer_notes":
+        return bool(text and (key_match or (key in {"note", "notes"} and customer_context)))
+    if detector == "customer_or_account_identifiers":
+        return bool(text and key_match)
+    if detector == "submitted_names":
+        return bool(
+            text
+            and (
+                key_match
+                or (key == "name" and customer_context)
+            )
+        )
+    if detector == "waitlist_submission_records":
+        return bool(
+            text
+            and (
+                "waitlist_submission" in ancestors
+                or "waitlist_submission" in object_keys
+                or (
+                    object_keys & _SUBMISSION_METADATA_KEYS
+                    and object_keys
+                    & {
+                        "email",
+                        "email_address",
+                        "phone",
+                        "phone_number",
+                        "customer_id",
+                        "account_id",
+                    }
+                )
+            )
+        )
+    if detector in {
+        "privileged_communications",
+        "legal_matter_records",
+        "signatures",
+        "government_identifiers",
+    }:
+        return bool(text and key_match)
+    if detector == "contracts_not_intentionally_published_as_customer_facing_terms":
+        public_terms_path = path.casefold().startswith(("terms/", "privacy/"))
+        return bool(text and key_match and not public_terms_path)
+    return False
+
+
+def _decode_structured(path: str, data: bytes) -> list[Any]:
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise GuardError("structured data is not UTF-8") from error
+    try:
+        if path.casefold().endswith(".jsonl"):
+            records = []
+            for line in text.splitlines():
+                if not line.strip():
+                    continue
+                records.append(
+                    json.loads(
+                        line,
+                        object_pairs_hook=_json_object,
+                        parse_constant=_reject_json_constant,
+                    )
+                )
+            return records
+        return [
+            json.loads(
+                text,
+                object_pairs_hook=_json_object,
+                parse_constant=_reject_json_constant,
+            )
+        ]
+    except (_DuplicateJsonKey, _InvalidJsonConstant, json.JSONDecodeError) as error:
+        raise GuardError("structured data is invalid") from error
+
+
+def _structured_findings(
+    path: str,
+    data: bytes,
+    policy: Policy,
+) -> Iterable[Finding]:
+    if not policy.structured_detectors or not path.casefold().endswith((".json", ".jsonl")):
+        return
+    try:
+        roots = _decode_structured(path, data)
+    except GuardError:
+        yield Finding("invalid_structured_data", path, "strict_json_parser")
+        return
+
+    detector_settings = {
+        detector: group.allow_placeholders
+        for group in policy.structured_detectors
+        for detector in group.detect
+    }
+    visited = 0
+
+    def walk(
+        node: Any,
+        *,
+        depth: int,
+        key: str,
+        ancestors: tuple[str, ...],
+        object_keys: set[str],
+    ) -> Iterable[Finding]:
+        nonlocal visited
+        if depth > policy.structured_max_depth:
+            yield Finding("structured_data_limit", path, "maximum_nesting_depth")
+            return
+        if isinstance(node, dict):
+            normalized_keys = {
+                _normalise_structured_key(item, policy.structured_key_decode_passes)
+                for item in node
+            }
+            visited += len(node)
+            if visited > policy.structured_max_items:
+                yield Finding("structured_data_limit", path, "maximum_collection_items")
+                return
+            for raw_key, child in node.items():
+                normalized_key = _normalise_structured_key(
+                    raw_key, policy.structured_key_decode_passes
+                )
+                yield from walk(
+                    child,
+                    depth=depth + 1,
+                    key=normalized_key,
+                    ancestors=ancestors + ((key,) if key else ()),
+                    object_keys=normalized_keys,
+                )
+            return
+        if isinstance(node, list):
+            visited += len(node)
+            if visited > policy.structured_max_items:
+                yield Finding("structured_data_limit", path, "maximum_collection_items")
+                return
+            for child in node:
+                yield from walk(
+                    child,
+                    depth=depth + 1,
+                    key=key,
+                    ancestors=ancestors,
+                    object_keys=object_keys,
+                )
+            return
+
+        for detector in sorted(detector_settings):
+            if not _structured_detector_match(
+                detector,
+                path=path,
+                key=key,
+                value=node,
+                ancestors=ancestors,
+                object_keys=object_keys,
+            ):
+                continue
+            if (
+                detector_settings[detector]
+                and _structured_value_allowed(policy, path, detector, node)
+            ):
+                continue
+            if (
+                detector in _SECRET_STRUCTURED_DETECTORS
+                and _structured_value_allowed(policy, path, detector, node)
+            ):
+                continue
+            yield Finding("structured_data_violation", path, detector)
+
+    for root in roots:
+        yield from walk(
+            root,
+            depth=0,
+            key="",
+            ancestors=(),
+            object_keys=set(),
+        )
+
+
 def _line_findings(
     path: str,
     text: str,
@@ -898,7 +1725,6 @@ def _line_findings(
         "synthetic-test-input",
     }
     synthetic_input = content_contract == "synthetic-test-input"
-    allow_customer_shapes = content_contract != "nondeploy-operational-contact"
     private_needles = [
         (index, needle)
         for index, repository in enumerate(policy.private_repositories)
@@ -1072,10 +1898,17 @@ def _line_findings(
                     )
 
         for detector, category, pattern in _SENSITIVE_PATTERNS:
-            if category == "customer" and not allow_customer_shapes:
-                continue
             match = pattern.search(normalized)
             if match:
+                structured_detector = {
+                    "email_address": "email_address_values",
+                    "phone_number": "phone_number_values",
+                    "postal_address": "postal_address_values",
+                }.get(detector, detector)
+                if _structured_value_allowed(
+                    policy, path, structured_detector, match.group(0)
+                ):
+                    continue
                 yield Finding(
                     "sensitive_data_shape",
                     path,
@@ -1089,6 +1922,7 @@ def scan_repository(
     root: str | os.PathLike[str] = ".",
     *,
     policy_path: str | os.PathLike[str] | None = None,
+    policy_data: bytes | None = None,
     manifest: Iterable[str] | str | os.PathLike[str] | None = None,
     enforce_source_classification: bool = True,
 ) -> dict[str, Any]:
@@ -1101,13 +1935,42 @@ def scan_repository(
     if not resolved_root.is_dir():
         raise GuardError("the scan root is not a directory")
 
-    policy, loaded_policy_path = _load_policy(resolved_root, policy_path)
+    if policy_data is None:
+        policy, loaded_policy_path = _load_policy(resolved_root, policy_path)
+        loaded_policy_data = (
+            loaded_policy_path.read_bytes() if loaded_policy_path is not None else None
+        )
+    else:
+        if policy_path is not None:
+            raise GuardError("policy_path and policy_data are mutually exclusive")
+        _, policy = _decode_policy_data(policy_data)
+        loaded_policy_data = policy_data
+        loaded_policy_path = resolved_root / ".git-policy-object"
     paths = _manifest_paths(resolved_root, manifest)
+    source_manifest_classes, source_manifest_sha256 = _source_manifest_classes(
+        resolved_root, manifest
+    )
+    git_context = _git_head_context(resolved_root)
+    commit_sha = git_context[0] if git_context is not None else None
+    git_entries = git_context[1] if git_context is not None else {}
+    policy_document: dict[str, Any] = {}
+    policy_sha256 = None
+    if loaded_policy_data is not None:
+        policy_document, _ = _decode_policy_data(loaded_policy_data)
+        policy_sha256 = hashlib.sha256(loaded_policy_data).hexdigest()
     artifact_entries = (
         _artifact_manifest_entries(resolved_root, policy)
         if enforce_source_classification
         else {}
     )
+    artifact_manifest_sha256 = None
+    if enforce_source_classification and policy.source_manifest is not None:
+        try:
+            artifact_manifest_sha256 = hashlib.sha256(
+                (resolved_root / policy.source_manifest).read_bytes()
+            ).hexdigest()
+        except OSError as error:
+            raise GuardError("the artifact manifest could not be hashed") from error
 
     findings: list[Finding] = []
     binary_paths: list[str] = []
@@ -1130,6 +1993,7 @@ def scan_repository(
 
     for raw_path in paths:
         display_path = raw_path.replace("\\", "/")
+        git_entry = git_entries.get(display_path)
         classification, content_contract, artifact_disposition = (
             _source_classification(display_path, policy, artifact_entries)
         )
@@ -1192,6 +2056,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "unknown",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1200,6 +2066,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1214,6 +2081,8 @@ def scan_repository(
                 unscanned_paths.append(display_path)
                 coverage[display_path] = {
                     "category": classification,
+                    "git_blob_id": git_entry.object_id if git_entry else None,
+                    "git_mode": git_entry.mode if git_entry else None,
                     "media_type": "symlink",
                     "origin": (
                         "tracked-source" if manifest is None else "selected-source"
@@ -1222,6 +2091,7 @@ def scan_repository(
                     "scanner_status": "deny",
                     "sha256": None,
                     "size": None,
+                    "source_manifest_class": source_manifest_classes.get(display_path),
                 }
                 continue
             resolved_candidate = candidate.resolve(strict=False)
@@ -1234,6 +2104,8 @@ def scan_repository(
                 unscanned_paths.append(display_path)
                 coverage[display_path] = {
                     "category": classification,
+                    "git_blob_id": git_entry.object_id if git_entry else None,
+                    "git_mode": git_entry.mode if git_entry else None,
                     "media_type": "unknown",
                     "origin": (
                         "tracked-source" if manifest is None else "selected-source"
@@ -1242,6 +2114,7 @@ def scan_repository(
                     "scanner_status": "deny",
                     "sha256": None,
                     "size": None,
+                    "source_manifest_class": source_manifest_classes.get(display_path),
                 }
                 continue
         except (OSError, ValueError, GuardError):
@@ -1249,6 +2122,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "unknown",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1257,6 +2132,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1267,6 +2143,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "missing",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1275,6 +2153,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
         except OSError:
@@ -1282,6 +2161,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "unknown",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1290,6 +2171,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1298,6 +2180,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "special",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1306,6 +2190,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1317,6 +2202,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": "unknown",
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1325,6 +2212,7 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": None,
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1333,6 +2221,8 @@ def scan_repository(
             unscanned_paths.append(display_path)
             coverage[display_path] = {
                 "category": classification,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": _media_type(display_path, False),
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1341,8 +2231,35 @@ def scan_repository(
                 "scanner_status": "deny",
                 "sha256": None,
                 "size": len(data),
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
+        if git_context is not None:
+            if git_entry is None:
+                findings.append(
+                    Finding("source_path_not_in_commit", display_path, "git_tree")
+                )
+            else:
+                try:
+                    committed_data = _git_blob(
+                        resolved_root, git_entry, policy.max_file_bytes
+                    )
+                except GuardError:
+                    findings.append(
+                        Finding("source_git_object_invalid", display_path, "git_object")
+                    )
+                else:
+                    if (
+                        committed_data != data
+                        or _git_worktree_mode(mode) != git_entry.mode
+                    ):
+                        findings.append(
+                            Finding(
+                                "worktree_diverges_from_commit",
+                                display_path,
+                                "git_object",
+                            )
+                        )
         if _is_binary(data):
             binary_paths.append(display_path)
             findings.extend(
@@ -1353,9 +2270,12 @@ def scan_repository(
                     content_contract=content_contract,
                 )
             )
+            findings.extend(_structured_findings(display_path, data, policy))
             coverage[display_path] = {
                 "category": classification,
                 "content_contract": content_contract,
+                "git_blob_id": git_entry.object_id if git_entry else None,
+                "git_mode": git_entry.mode if git_entry else None,
                 "media_type": _media_type(display_path, True),
                 "origin": (
                     "tracked-source" if manifest is None else "selected-source"
@@ -1364,6 +2284,7 @@ def scan_repository(
                 "scanner_status": "pass",
                 "sha256": hashlib.sha256(data).hexdigest(),
                 "size": len(data),
+                "source_manifest_class": source_manifest_classes.get(display_path),
             }
             continue
 
@@ -1381,15 +2302,19 @@ def scan_repository(
                 content_contract=content_contract,
             )
         )
+        findings.extend(_structured_findings(display_path, data, policy))
         coverage[display_path] = {
             "category": classification,
             "content_contract": content_contract,
+            "git_blob_id": git_entry.object_id if git_entry else None,
+            "git_mode": git_entry.mode if git_entry else None,
             "media_type": _media_type(display_path, False),
             "origin": "tracked-source" if manifest is None else "selected-source",
             "path": display_path,
             "scanner_status": "pass",
             "sha256": hashlib.sha256(data).hexdigest(),
             "size": len(data),
+            "source_manifest_class": source_manifest_classes.get(display_path),
         }
 
     unique_findings = {
@@ -1449,6 +2374,7 @@ def scan_repository(
                 set(binary_paths), key=lambda value: (value.casefold(), value)
             )
         ],
+        "commit_sha": commit_sha,
         "coverage_records": coverage_records,
         "finding_count": len(ordered_findings),
         "findings": [
@@ -1462,7 +2388,21 @@ def scan_repository(
             for finding in ordered_findings
         ],
         "policy_loaded": loaded_policy_path is not None,
+        "generated_artifact_count": 0,
+        "manifest_sha256": artifact_manifest_sha256,
+        "payload_sha256": None,
+        "policy_id": policy_document.get("policy_id"),
+        "policy_sha256": policy_sha256,
+        "policy_version": policy_document.get("policy_version"),
+        "repository": policy_document.get("repository"),
         "result": "deny" if ordered_findings else "pass",
+        "rule_results": [
+            {
+                "finding_count": len(ordered_findings),
+                "gate": "source",
+                "result": "deny" if ordered_findings else "pass",
+            }
+        ],
         "scan_completed_at": None,
         "scan_counts": {
             "classified_paths": len(classifications),
@@ -1483,6 +2423,7 @@ def scan_repository(
             )
         ],
         "source_file_count": len(paths),
+        "source_manifest_sha256": source_manifest_sha256,
         "text_paths": [
             evidence_path(path)
             for path in sorted(

@@ -9,8 +9,8 @@ import json
 import os
 from pathlib import Path
 import re
-import subprocess
 import sys
+import tarfile
 from typing import Any, Mapping, Sequence
 
 if __package__:
@@ -64,8 +64,18 @@ def _fail(code: str) -> None:
 
 def _load_json(path: Path, code: str) -> Mapping[str, Any]:
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        document = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=publication_guard._json_object,
+            parse_constant=publication_guard._reject_json_constant,
+        )
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        publication_guard._DuplicateJsonKey,
+        publication_guard._InvalidJsonConstant,
+    ):
         _fail(code)
     if not isinstance(document, Mapping):
         _fail(code)
@@ -81,19 +91,6 @@ def _sha256(path: Path) -> str:
     except OSError:
         _fail("bound_file_unreadable")
     return digest.hexdigest()
-
-
-def _git_commit(source: Path) -> str:
-    result = subprocess.run(
-        ["git", "-C", os.fspath(source), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    commit = result.stdout.strip()
-    if result.returncode or not SHA_PATTERN.fullmatch(commit):
-        _fail("commit_unavailable")
-    return commit
 
 
 def _inside(candidate: Path, directory: Path) -> bool:
@@ -123,8 +120,22 @@ def _assert_private_safe(value: Any) -> None:
         _fail("rapp_frame_material")
 
 
-def load_source_manifest(path: Path) -> Mapping[str, Any]:
-    document = _load_json(path, "source_manifest_invalid")
+def _source_manifest_from_data(data: bytes) -> Mapping[str, Any]:
+    try:
+        document = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=publication_guard._json_object,
+            parse_constant=publication_guard._reject_json_constant,
+        )
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        publication_guard._DuplicateJsonKey,
+        publication_guard._InvalidJsonConstant,
+    ):
+        _fail("source_manifest_invalid")
+    if not isinstance(document, Mapping):
+        _fail("source_manifest_invalid")
     if (
         document.get("document_type") != "publication-source-manifest"
         or document.get("schema_version") != 1
@@ -170,17 +181,82 @@ def load_source_manifest(path: Path) -> Mapping[str, Any]:
     return document
 
 
+def load_source_manifest(path: Path) -> Mapping[str, Any]:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        _fail("source_manifest_invalid")
+    return _source_manifest_from_data(data)
+
+
+def _git_contract(
+    source: Path,
+    relative: str,
+    entries: Mapping[str, publication_artifact.GitTreeEntry],
+    *,
+    maximum: int = publication_guard.DEFAULT_MAX_FILE_BYTES,
+) -> tuple[publication_artifact.GitTreeEntry, bytes]:
+    entry = entries.get(relative)
+    if entry is None:
+        _fail("git_contract_missing")
+    try:
+        data = publication_artifact._git_blob_data(source, entry, maximum)
+    except publication_artifact.ArtifactError:
+        _fail("git_contract_invalid")
+    return entry, data
+
+
 def validate_source_evidence(
     *,
     source: Path,
     manifest_path: Path,
     evidence_path: Path,
-) -> dict[str, int]:
+    expected_commit: str,
+) -> dict[str, int | str]:
     source = source.resolve(strict=True)
     evidence_path = evidence_path.resolve(strict=True)
     if _inside(evidence_path, source):
         _fail("source_evidence_inside_checkout")
-    manifest = load_source_manifest(manifest_path.resolve(strict=True))
+    if not SHA_PATTERN.fullmatch(expected_commit):
+        _fail("expected_commit_invalid")
+    try:
+        candidate_manifest = manifest_path
+        if not candidate_manifest.is_absolute():
+            candidate_manifest = source / candidate_manifest
+        candidate_manifest = Path(os.path.abspath(candidate_manifest))
+        manifest_relative = candidate_manifest.relative_to(source).as_posix()
+    except ValueError:
+        _fail("source_manifest_invalid")
+    try:
+        git_entries, current_commit = publication_artifact._git_context(source)
+    except publication_artifact.ArtifactError:
+        _fail("commit_unavailable")
+    if current_commit != expected_commit:
+        _fail("commit_binding_mismatch")
+    _, manifest_data = _git_contract(source, manifest_relative, git_entries)
+    manifest = _source_manifest_from_data(manifest_data)
+    _, policy_data = _git_contract(
+        source, publication_guard.POLICY_FILENAME, git_entries
+    )
+    try:
+        policy_document, policy = publication_guard._decode_policy_data(policy_data)
+    except publication_guard.GuardError:
+        _fail("policy_invalid")
+    artifact_manifest_name = policy.source_manifest
+    if not artifact_manifest_name:
+        _fail("policy_invalid")
+    _, artifact_manifest_data = _git_contract(
+        source, artifact_manifest_name, git_entries
+    )
+    try:
+        artifact_manifest = publication_artifact._manifest_from_data(
+            artifact_manifest_data
+        )
+    except publication_artifact.ArtifactError:
+        _fail("source_manifest_invalid")
+    artifact_entries = {
+        entry.path: entry.publication_class for entry in artifact_manifest.entries
+    }
     evidence = _load_json(evidence_path, "source_evidence_invalid")
     _assert_private_safe(evidence)
 
@@ -188,11 +264,20 @@ def validate_source_evidence(
     expected_keys = {
         "artifact_boundary",
         "binary_paths",
+        "commit_sha",
         "coverage_records",
         "finding_count",
         "findings",
+        "generated_artifact_count",
+        "manifest_sha256",
+        "payload_sha256",
         "policy_loaded",
+        "policy_id",
+        "policy_sha256",
+        "policy_version",
+        "repository",
         "result",
+        "rule_results",
         "scan_completed_at",
         "scan_counts",
         "scan_started_at",
@@ -202,6 +287,7 @@ def validate_source_evidence(
         "schema_version",
         "skipped_paths",
         "source_file_count",
+        "source_manifest_sha256",
         "text_paths",
         "unscanned_paths",
     }
@@ -221,6 +307,20 @@ def validate_source_evidence(
         or evidence.get("scanner_name") != publication_guard.SCANNER_NAME
         or evidence.get("scanner_version") != publication_guard.SCANNER_VERSION
         or evidence.get("source_file_count") != len(files)
+        or evidence.get("generated_artifact_count") != 0
+        or evidence.get("manifest_sha256")
+        != hashlib.sha256(artifact_manifest_data).hexdigest()
+        or evidence.get("payload_sha256") is not None
+        or evidence.get("commit_sha") != expected_commit
+        or evidence.get("policy_id") != policy_document.get("policy_id")
+        or evidence.get("policy_version") != policy_document.get("policy_version")
+        or evidence.get("repository") != policy_document.get("repository")
+        or evidence.get("policy_sha256") != hashlib.sha256(policy_data).hexdigest()
+        or evidence.get("source_manifest_sha256")
+        != hashlib.sha256(manifest_data).hexdigest()
+        or manifest.get("repository") != policy_document.get("repository")
+        or evidence.get("rule_results")
+        != [{"finding_count": 0, "gate": "source", "result": "pass"}]
     ):
         _fail("source_evidence_not_pass")
     scanned = evidence.get("text_paths")
@@ -248,16 +348,24 @@ def validate_source_evidence(
         "artifact_manifest_class",
         "category",
         "content_contract",
+        "git_blob_id",
+        "git_mode",
         "media_type",
         "origin",
         "path",
         "scanner_status",
         "sha256",
         "size",
+        "source_manifest_class",
     }
     if not isinstance(records, list) or len(records) != len(files):
         _fail("source_evidence_coverage")
     record_paths: list[str] = []
+    manifest_classes = {
+        path: entry["class"]
+        for entry in manifest["source_classes"]
+        for path in entry["paths"]
+    }
     for record in records:
         if (
             not isinstance(record, Mapping)
@@ -277,50 +385,143 @@ def validate_source_evidence(
             or re.fullmatch(r"[0-9a-f]{64}", record["sha256"]) is None
             or not isinstance(record.get("size"), int)
             or record["size"] < 0
+            or not isinstance(record.get("git_blob_id"), str)
+            or SHA_PATTERN.fullmatch(record["git_blob_id"]) is None
+            or record.get("git_mode") not in {"100644", "100755"}
+            or record.get("source_manifest_class")
+            != manifest_classes.get(record.get("path"))
         ):
             _fail("source_evidence_coverage")
+        path = record["path"]
+        git_entry = git_entries.get(path)
+        if (
+            git_entry is None
+            or record["git_blob_id"] != git_entry.object_id
+            or record["git_mode"] != git_entry.mode
+        ):
+            _fail("source_evidence_git_binding")
+        try:
+            blob = publication_artifact._git_blob_data(
+                source, git_entry, publication_guard.DEFAULT_MAX_FILE_BYTES
+            )
+        except publication_artifact.ArtifactError:
+            _fail("source_evidence_git_binding")
+        expected_classification, expected_contract, expected_disposition = (
+            publication_guard._source_classification(
+                path, policy, artifact_entries
+            )
+        )
+        if (
+            record["sha256"] != hashlib.sha256(blob).hexdigest()
+            or record["size"] != len(blob)
+            or record["category"] != expected_classification
+            or record["content_contract"] != expected_contract
+            or record["artifact_disposition"] != expected_disposition
+            or record["artifact_manifest_class"] != artifact_entries.get(path)
+        ):
+            _fail("source_evidence_git_binding")
         record_paths.append(record["path"])
     if record_paths != files:
         _fail("source_evidence_coverage")
-    return {"source_file_count": len(files)}
+    return {"commit_sha": expected_commit, "source_file_count": len(files)}
 
 
-def _policy_binding(policy_path: Path) -> tuple[str, str, str, str]:
-    policy = _load_json(policy_path, "policy_invalid")
-    policy_id = policy.get("policy_id")
-    policy_version = policy.get("policy_version")
-    repository = policy.get("repository")
-    if not all(isinstance(item, str) and item for item in (policy_id, policy_version, repository)):
-        _fail("policy_invalid")
-    return policy_id, policy_version, repository, _sha256(policy_path)
+def _validate_pages_payload(
+    *,
+    payload: Path,
+    evidence: Mapping[str, Any],
+    records: Mapping[str, Mapping[str, Any]],
+    expected_paths: list[str],
+) -> None:
+    if evidence.get("payload_member_count") != len(expected_paths):
+        _fail("payload_count_mismatch")
+    observed: list[str] = []
+    try:
+        with tarfile.open(payload, mode="r:") as archive:
+            for member in archive.getmembers():
+                name = member.name
+                if (
+                    not member.isfile()
+                    or not name
+                    or name.startswith("/")
+                    or "\\" in name
+                    or ".." in Path(name).parts
+                    or name in observed
+                    or name not in records
+                    or member.uid != 0
+                    or member.gid != 0
+                    or member.uname != ""
+                    or member.gname != ""
+                    or member.mtime != 0
+                ):
+                    _fail("payload_member_invalid")
+                record = records[name]
+                expected_mode = int(str(record.get("git_mode")), 8) & 0o777
+                stream = archive.extractfile(member)
+                if stream is None:
+                    _fail("payload_member_invalid")
+                data = stream.read()
+                if (
+                    member.mode != expected_mode
+                    or member.size != record.get("size")
+                    or hashlib.sha256(data).hexdigest() != record.get("sha256")
+                ):
+                    _fail("payload_member_binding")
+                observed.append(name)
+    except (OSError, tarfile.TarError, ValueError):
+        _fail("payload_invalid")
+    if observed != expected_paths:
+        _fail("payload_inventory_mismatch")
 
 
 def validate_artifact_evidence(
     *,
     source: Path,
-    artifact: Path,
+    artifact: Path | None,
+    payload: Path,
     evidence_path: Path,
     expected_commit: str,
     manifest_name: str = publication_artifact.MANIFEST_FILENAME,
     policy_name: str = publication_artifact.POLICY_FILENAME,
 ) -> dict[str, int | str]:
     source = source.resolve(strict=True)
-    artifact = artifact.resolve(strict=True)
+    artifact = artifact.resolve(strict=True) if artifact is not None else None
+    payload = payload.resolve(strict=True)
     evidence_path = evidence_path.resolve(strict=True)
-    if _inside(artifact, source):
+    if artifact is not None and _inside(artifact, source):
         _fail("artifact_inside_checkout")
-    if _inside(evidence_path, artifact):
+    if artifact is not None and _inside(evidence_path, artifact):
         _fail("evidence_inside_artifact")
+    if _inside(payload, source) or payload.name != "artifact.tar":
+        _fail("payload_location_invalid")
     if not SHA_PATTERN.fullmatch(expected_commit):
         _fail("expected_commit_invalid")
 
-    manifest_path = (source / manifest_name).resolve(strict=True)
-    policy_path = (source / policy_name).resolve(strict=True)
-    manifest = publication_artifact.load_manifest(manifest_path)
-    policy_id, policy_version, repository, policy_sha256 = _policy_binding(policy_path)
-    current_commit = _git_commit(source)
+    try:
+        git_entries, current_commit = publication_artifact._git_context(source)
+    except publication_artifact.ArtifactError:
+        _fail("commit_unavailable")
     if expected_commit != current_commit:
         _fail("commit_binding_mismatch")
+    _, manifest_data = _git_contract(source, manifest_name, git_entries)
+    _, policy_data = _git_contract(source, policy_name, git_entries)
+    _, source_manifest_data = _git_contract(
+        source, SOURCE_MANIFEST_FILENAME, git_entries
+    )
+    try:
+        manifest = publication_artifact._manifest_from_data(manifest_data)
+        policy_document, _ = publication_guard._decode_policy_data(policy_data)
+    except (publication_artifact.ArtifactError, publication_guard.GuardError):
+        _fail("policy_invalid")
+    policy_id = policy_document.get("policy_id")
+    policy_version = policy_document.get("policy_version")
+    repository = policy_document.get("repository")
+    policy_sha256 = hashlib.sha256(policy_data).hexdigest()
+    if not all(
+        isinstance(item, str) and item
+        for item in (policy_id, policy_version, repository)
+    ):
+        _fail("policy_invalid")
 
     evidence = _load_json(evidence_path, "artifact_evidence_invalid")
     _assert_private_safe(evidence)
@@ -330,12 +531,17 @@ def validate_artifact_evidence(
         evidence.get("artifact_boundary") != ARTIFACT_BOUNDARY
         or evidence.get("schema_version") != 1
         or evidence.get("commit_sha") != expected_commit
-        or evidence.get("manifest_sha256") != manifest.sha256
+        or evidence.get("manifest_sha256") != hashlib.sha256(manifest_data).hexdigest()
         or evidence.get("policy_sha256") != policy_sha256
         or evidence.get("policy_id") != policy_id
         or evidence.get("policy_version") != policy_version
         or evidence.get("repository") != repository
         or evidence.get("repository") != manifest.repository
+        or evidence.get("source_manifest_sha256")
+        != hashlib.sha256(source_manifest_data).hexdigest()
+        or evidence.get("payload_format") != "github-pages-artifact.tar"
+        or evidence.get("payload_sha256") != _sha256(payload)
+        or evidence.get("payload_size") != payload.stat().st_size
     ):
         _fail("artifact_evidence_binding")
 
@@ -387,23 +593,42 @@ def validate_artifact_evidence(
         _fail("artifact_evidence_coverage")
     for path in expected_paths:
         record = records[path]
-        candidate = artifact / path
+        git_entry = git_entries.get(path)
+        if git_entry is None:
+            _fail("artifact_evidence_git_binding")
         try:
-            metadata = candidate.lstat()
-        except OSError:
-            _fail("artifact_file_unreadable")
-        if not candidate.is_file() or candidate.is_symlink():
-            _fail("artifact_file_invalid")
+            git_data = publication_artifact._git_blob_data(
+                source, git_entry, manifest.max_file_bytes
+            )
+        except publication_artifact.ArtifactError:
+            _fail("artifact_evidence_git_binding")
         if (
             record.get("scanner_status") != "pass"
             or record.get("origin") != "generated-artifact"
             or record.get("class") != entries[path].publication_class
             or not isinstance(record.get("category"), list)
             or not record["category"]
-            or record.get("sha256") != _sha256(candidate)
-            or record.get("size") != metadata.st_size
+            or record.get("git_blob_id") != git_entry.object_id
+            or record.get("git_mode") != git_entry.mode
+            or record.get("sha256") != hashlib.sha256(git_data).hexdigest()
+            or record.get("size") != len(git_data)
         ):
             _fail("artifact_evidence_file_binding")
+        if artifact is not None:
+            candidate = artifact / path
+            try:
+                metadata = candidate.lstat()
+            except OSError:
+                _fail("artifact_file_unreadable")
+            if not candidate.is_file() or candidate.is_symlink():
+                _fail("artifact_file_invalid")
+            actual_mode = "100755" if metadata.st_mode & 0o111 else "100644"
+            if (
+                record.get("sha256") != _sha256(candidate)
+                or record.get("size") != metadata.st_size
+                or record.get("git_mode") != actual_mode
+            ):
+                _fail("artifact_evidence_file_binding")
     for link in links:
         if (
             not isinstance(link, Mapping)
@@ -415,17 +640,33 @@ def validate_artifact_evidence(
         ):
             _fail("artifact_evidence_link_coverage")
 
-    try:
-        recomputed = publication_artifact.scan_artifact(
-            source,
-            artifact,
-            manifest_path=manifest_name,
-            policy_path=policy_name,
-        )
-    except publication_artifact.ArtifactError:
-        _fail("artifact_rescan_failed")
-    if evidence != recomputed:
-        _fail("artifact_evidence_stale")
+    _validate_pages_payload(
+        payload=payload,
+        evidence=evidence,
+        records=records,
+        expected_paths=expected_paths,
+    )
+    if artifact is not None:
+        try:
+            recomputed = publication_artifact.scan_artifact(
+                source,
+                artifact,
+                manifest_path=manifest_name,
+                policy_path=policy_name,
+            )
+        except publication_artifact.ArtifactError:
+            _fail("artifact_rescan_failed")
+        sealed_fields = {
+            "payload_format",
+            "payload_member_count",
+            "payload_sha256",
+            "payload_size",
+        }
+        unsealed_evidence = {
+            key: value for key, value in evidence.items() if key not in sealed_fields
+        }
+        if unsealed_evidence != recomputed:
+            _fail("artifact_evidence_stale")
     return {
         "artifact_count": len(expected_paths),
         "commit_sha": expected_commit,
@@ -441,12 +682,14 @@ def _parser() -> argparse.ArgumentParser:
     source.add_argument("--source", default=".")
     source.add_argument("--manifest", default=SOURCE_MANIFEST_FILENAME)
     source.add_argument("--evidence", required=True)
+    source.add_argument("--expected-commit", required=True)
 
     artifact = subparsers.add_parser("artifact")
     artifact.add_argument("--source", default=".")
     artifact.add_argument("--manifest", default=publication_artifact.MANIFEST_FILENAME)
     artifact.add_argument("--policy", default=publication_artifact.POLICY_FILENAME)
-    artifact.add_argument("--artifact", required=True)
+    artifact.add_argument("--artifact")
+    artifact.add_argument("--payload", required=True)
     artifact.add_argument("--evidence", required=True)
     artifact.add_argument("--expected-commit", required=True)
     return parser
@@ -460,15 +703,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 source=Path(args.source),
                 manifest_path=Path(args.manifest),
                 evidence_path=Path(args.evidence),
+                expected_commit=args.expected_commit,
             )
             print(
                 "publication source evidence validated: "
-                f"source_file_count={result['source_file_count']}"
+                f"source_file_count={result['source_file_count']} "
+                f"commit={result['commit_sha']}"
             )
         else:
             result = validate_artifact_evidence(
                 source=Path(args.source),
-                artifact=Path(args.artifact),
+                artifact=Path(args.artifact) if args.artifact else None,
+                payload=Path(args.payload),
                 evidence_path=Path(args.evidence),
                 expected_commit=args.expected_commit,
                 manifest_name=args.manifest,

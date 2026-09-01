@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 import hashlib
 from html import unescape
 from html.parser import HTMLParser
+import io
 import json
 import mimetypes
 import os
@@ -17,6 +18,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 from typing import Any, Callable, Iterable, Mapping, Sequence
 import unicodedata
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
@@ -32,8 +34,9 @@ except ModuleNotFoundError:
 
 MANIFEST_FILENAME = "PUBLICATION-MANIFEST.json"
 POLICY_FILENAME = publication_guard.POLICY_FILENAME
+DEFAULT_MAX_FILE_BYTES = publication_guard.DEFAULT_MAX_FILE_BYTES
 SCANNER_NAME = "rapterbox-publication-artifact"
-SCANNER_VERSION = "1.1.0"
+SCANNER_VERSION = "1.2.0"
 ARTIFACT_BOUNDARY = publication_guard.ARTIFACT_BOUNDARY
 PUBLICATION_CLASSES = frozenset(("site-content", "publication-control"))
 REPOSITORY_HOSTS_DEFAULT = frozenset(
@@ -95,6 +98,16 @@ class FileSnapshot:
     sha256: str
     size: int
     signature: tuple[int, ...]
+    git_blob_id: str | None = None
+    git_mode: str | None = None
+
+
+@dataclass(frozen=True)
+class GitTreeEntry:
+    path: str
+    mode: str
+    object_type: str
+    object_id: str
 
 
 @dataclass(frozen=True)
@@ -139,8 +152,17 @@ def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 def _decode_json(data: bytes) -> Any:
     try:
-        return json.loads(data.decode("utf-8"), object_pairs_hook=_json_object)
-    except (UnicodeDecodeError, json.JSONDecodeError, _DuplicateJsonKey) as error:
+        return json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=_json_object,
+            parse_constant=publication_guard._reject_json_constant,
+        )
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        _DuplicateJsonKey,
+        publication_guard._InvalidJsonConstant,
+    ) as error:
         raise ArtifactError("invalid_json") from error
 
 
@@ -212,12 +234,7 @@ def _normalize_origin(value: str) -> str:
     return f"{parts.scheme.lower()}://{authority}"
 
 
-def load_manifest(path: str | os.PathLike[str]) -> Manifest:
-    manifest_path = Path(path)
-    try:
-        data = manifest_path.read_bytes()
-    except OSError as error:
-        raise ArtifactError("manifest_unreadable") from error
+def _manifest_from_data(data: bytes) -> Manifest:
     document = _decode_json(data)
     if not isinstance(document, Mapping):
         raise ArtifactError("invalid_manifest")
@@ -284,6 +301,14 @@ def load_manifest(path: str | os.PathLike[str]) -> Manifest:
     )
 
 
+def load_manifest(path: str | os.PathLike[str]) -> Manifest:
+    try:
+        data = Path(path).read_bytes()
+    except OSError as error:
+        raise ArtifactError("manifest_unreadable") from error
+    return _manifest_from_data(data)
+
+
 def _resolve_contract_path(source: Path, value: str | os.PathLike[str]) -> Path:
     candidate = Path(value)
     if not candidate.is_absolute():
@@ -323,7 +348,7 @@ def _git_output(source: Path, arguments: Sequence[str]) -> bytes:
     return result.stdout
 
 
-def _git_context(source: Path) -> tuple[set[str], str]:
+def _git_context(source: Path) -> tuple[dict[str, GitTreeEntry], str]:
     top = Path(
         os.fsdecode(_git_output(source, ("rev-parse", "--show-toplevel"))).strip()
     )
@@ -333,15 +358,82 @@ def _git_context(source: Path) -> tuple[set[str], str]:
         raise ArtifactError("git_root_unreadable") from error
     if resolved_top != source:
         raise ArtifactError("source_must_be_git_root")
-    tracked = {
-        os.fsdecode(value)
-        for value in _git_output(source, ("ls-files", "-z")).split(b"\0")
-        if value
-    }
     commit_sha = os.fsdecode(_git_output(source, ("rev-parse", "HEAD"))).strip()
     if not re.fullmatch(r"[0-9a-f]{40,64}", commit_sha):
         raise ArtifactError("invalid_commit_sha")
-    return tracked, commit_sha
+    entries: dict[str, GitTreeEntry] = {}
+    for raw in _git_output(
+        source, ("ls-tree", "-rz", "--full-tree", commit_sha)
+    ).split(b"\0"):
+        if not raw:
+            continue
+        try:
+            metadata, raw_path = raw.split(b"\t", 1)
+            raw_mode, raw_type, raw_object = metadata.split(b" ", 2)
+            path = raw_path.decode("utf-8")
+            mode = raw_mode.decode("ascii")
+            object_type = raw_type.decode("ascii")
+            object_id = raw_object.decode("ascii")
+        except (UnicodeDecodeError, ValueError) as error:
+            raise ArtifactError("git_tree_invalid") from error
+        if (
+            path in entries
+            or re.fullmatch(r"[0-9a-f]{40,64}", object_id) is None
+            or re.fullmatch(r"[0-7]{6}", mode) is None
+        ):
+            raise ArtifactError("git_tree_invalid")
+        entries[path] = GitTreeEntry(path, mode, object_type, object_id)
+    return entries, commit_sha
+
+
+def _git_blob_data(source: Path, entry: GitTreeEntry, maximum: int) -> bytes:
+    if entry.object_type != "blob" or entry.mode not in {"100644", "100755"}:
+        raise ArtifactError("unsupported_git_entry")
+    data = _git_output(source, ("cat-file", "blob", entry.object_id))
+    if len(data) > maximum:
+        raise ArtifactError("source_file_too_large")
+    return data
+
+
+def _git_snapshot(
+    source: Path,
+    entry: GitTreeEntry,
+    maximum: int,
+) -> FileSnapshot:
+    data = _git_blob_data(source, entry, maximum)
+    return FileSnapshot(
+        path=entry.path,
+        data=data,
+        sha256=_sha256(data),
+        size=len(data),
+        signature=(),
+        git_blob_id=entry.object_id,
+        git_mode=entry.mode,
+    )
+
+
+def _worktree_mode(metadata: os.stat_result) -> str:
+    return "100755" if metadata.st_mode & 0o111 else "100644"
+
+
+def _assert_worktree_matches_git(
+    source: Path,
+    snapshot: FileSnapshot,
+    maximum: int,
+    *,
+    mutation_hook: Callable[[Path], None] | None = None,
+) -> None:
+    worktree = _read_stable_file(
+        source, snapshot.path, maximum, mutation_hook=mutation_hook
+    )
+    if (
+        worktree.sha256 != snapshot.sha256
+        or worktree.size != snapshot.size
+        or snapshot.git_mode is None
+        or _worktree_mode(os.stat(source / PurePosixPath(snapshot.path)))
+        != snapshot.git_mode
+    ):
+        raise ArtifactError("worktree_diverges_from_commit")
 
 
 def _stat_signature(value: os.stat_result) -> tuple[int, ...]:
@@ -467,67 +559,68 @@ def build_artifact(
 
     manifest_file = _resolve_contract_path(source_root, manifest_path)
     policy_file = _resolve_contract_path(source_root, policy_path)
-    manifest = load_manifest(manifest_file)
     tracked, commit_sha = _git_context(source_root)
+    manifest_relative = manifest_file.relative_to(source_root).as_posix()
+    policy_relative = policy_file.relative_to(source_root).as_posix()
     for contract in (manifest_file, policy_file):
         relative_contract = contract.relative_to(source_root).as_posix()
         if relative_contract not in tracked:
             raise ArtifactError("untracked_contract_file")
-    undeclared = sorted(set(manifest.paths) - tracked, key=_path_sort_key)
+    manifest_snapshot = _git_snapshot(
+        source_root, tracked[manifest_relative], DEFAULT_MAX_FILE_BYTES
+    )
+    manifest = _manifest_from_data(manifest_snapshot.data)
+    undeclared = sorted(set(manifest.paths) - set(tracked), key=_path_sort_key)
     if undeclared:
         raise ArtifactError("manifest_path_not_tracked")
 
-    policy_snapshot = _read_stable_file(
-        source_root, policy_file.relative_to(source_root).as_posix(), manifest.max_file_bytes
+    policy_snapshot = _git_snapshot(
+        source_root, tracked[policy_relative], manifest.max_file_bytes
     )
     try:
-        policy_document = _decode_json(policy_snapshot.data)
+        policy_document, _ = publication_guard._decode_policy_data(policy_snapshot.data)
     except ArtifactError as error:
+        raise ArtifactError("policy_invalid") from error
+    except publication_guard.GuardError as error:
         raise ArtifactError("policy_invalid") from error
     if not isinstance(policy_document, Mapping):
         raise ArtifactError("policy_invalid")
 
     target = _outside_source(source_root, Path(output))
-    snapshots: list[FileSnapshot] = []
+    snapshots = [
+        _git_snapshot(source_root, tracked[entry.path], manifest.max_file_bytes)
+        for entry in manifest.entries
+    ]
+    for snapshot in (manifest_snapshot, policy_snapshot, *snapshots):
+        _assert_worktree_matches_git(
+            source_root,
+            snapshot,
+            max(manifest.max_file_bytes, DEFAULT_MAX_FILE_BYTES),
+            mutation_hook=_mutation_hook if snapshot.path in manifest.paths else None,
+        )
     try:
         target.mkdir(mode=0o755)
-        for entry in manifest.entries:
-            snapshot = _read_stable_file(
-                source_root,
-                entry.path,
-                manifest.max_file_bytes,
-                mutation_hook=_mutation_hook,
-            )
-            destination = target / PurePosixPath(entry.path)
+        for snapshot in snapshots:
+            destination = target / PurePosixPath(snapshot.path)
             destination.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
             try:
                 with destination.open("xb") as stream:
                     stream.write(snapshot.data)
+                os.chmod(destination, int(snapshot.git_mode or "100644", 8) & 0o777)
             except OSError as error:
                 raise ArtifactError("artifact_write_failed") from error
-            snapshots.append(snapshot)
-
-        final_manifest = _read_stable_file(
-            source_root,
-            manifest_file.relative_to(source_root).as_posix(),
-            manifest.max_file_bytes,
-        )
-        final_policy = _read_stable_file(
-            source_root,
-            policy_file.relative_to(source_root).as_posix(),
-            manifest.max_file_bytes,
-        )
-        if final_manifest.sha256 != manifest.sha256:
-            raise ArtifactError("manifest_changed_during_copy")
-        if final_policy.sha256 != policy_snapshot.sha256:
-            raise ArtifactError("policy_changed_during_copy")
 
         actual = _regular_artifact_paths(target)
         if actual != list(manifest.paths):
             raise ArtifactError("artifact_inventory_mismatch")
         for snapshot in snapshots:
             copied = _read_stable_file(target, snapshot.path, manifest.max_file_bytes)
-            if copied.sha256 != snapshot.sha256 or copied.size != snapshot.size:
+            if (
+                copied.sha256 != snapshot.sha256
+                or copied.size != snapshot.size
+                or _worktree_mode(os.stat(target / PurePosixPath(snapshot.path)))
+                != snapshot.git_mode
+            ):
                 raise ArtifactError("artifact_copy_mismatch")
     except Exception:
         shutil.rmtree(target, ignore_errors=True)
@@ -538,6 +631,16 @@ def build_artifact(
         "commit_sha": commit_sha,
         "file_count": len(snapshots),
         "manifest_sha256": manifest.sha256,
+        "git_inventory": [
+            {
+                "git_blob_id": snapshot.git_blob_id,
+                "git_mode": snapshot.git_mode,
+                "path": snapshot.path,
+                "sha256": snapshot.sha256,
+                "size": snapshot.size,
+            }
+            for snapshot in snapshots
+        ],
         "paths": [snapshot.path for snapshot in snapshots],
         "policy_sha256": policy_snapshot.sha256,
         "result": "pass",
@@ -598,18 +701,11 @@ def _glob_regex(pattern: str) -> re.Pattern[str]:
         raise ArtifactError("invalid_policy_path_pattern") from error
 
 
-def _policy_contract(
-    policy_path: Path,
+def _policy_contract_data(
+    policy_data: bytes,
 ) -> tuple[dict[str, Any], publication_guard.Policy, str, set[str]]:
     try:
-        policy_data = policy_path.read_bytes()
-    except OSError as error:
-        raise ArtifactError("policy_unreadable") from error
-    document = _decode_json(policy_data)
-    if not isinstance(document, dict):
-        raise ArtifactError("policy_invalid")
-    try:
-        guard_policy, _ = publication_guard._load_policy(policy_path.parent, policy_path)
+        document, guard_policy = publication_guard._decode_policy_data(policy_data)
     except publication_guard.GuardError as error:
         raise ArtifactError("policy_invalid") from error
 
@@ -645,6 +741,16 @@ def _policy_contract(
     control_paths = {_validate_relative_path(value[1:]) for value in raw_control_paths}
 
     return document, guard_policy, _sha256(policy_data), control_paths
+
+
+def _policy_contract(
+    policy_path: Path,
+) -> tuple[dict[str, Any], publication_guard.Policy, str, set[str]]:
+    try:
+        policy_data = policy_path.read_bytes()
+    except OSError as error:
+        raise ArtifactError("policy_unreadable") from error
+    return _policy_contract_data(policy_data)
 
 
 def _path_categories(
@@ -1091,19 +1197,47 @@ def scan_artifact(
         raise ArtifactError("scan_root_invalid")
     manifest_file = _resolve_contract_path(source_root, manifest_path)
     policy_file = _resolve_contract_path(source_root, policy_path)
-    manifest = load_manifest(manifest_file)
     tracked, commit_sha = _git_context(source_root)
-    if manifest_file.relative_to(source_root).as_posix() not in tracked:
+    manifest_relative = manifest_file.relative_to(source_root).as_posix()
+    policy_relative = policy_file.relative_to(source_root).as_posix()
+    if manifest_relative not in tracked:
         raise ArtifactError("untracked_contract_file")
-    if policy_file.relative_to(source_root).as_posix() not in tracked:
+    if policy_relative not in tracked:
         raise ArtifactError("untracked_contract_file")
+    manifest_snapshot = _git_snapshot(
+        source_root, tracked[manifest_relative], DEFAULT_MAX_FILE_BYTES
+    )
+    manifest = _manifest_from_data(manifest_snapshot.data)
+    policy_snapshot = _git_snapshot(
+        source_root, tracked[policy_relative], manifest.max_file_bytes
+    )
+    source_manifest_entry = tracked.get("PUBLICATION-SOURCE-MANIFEST.json")
+    source_manifest_sha256 = (
+        _git_snapshot(
+            source_root, source_manifest_entry, DEFAULT_MAX_FILE_BYTES
+        ).sha256
+        if source_manifest_entry is not None
+        else None
+    )
+    expected_git: dict[str, FileSnapshot] = {}
+    for path in manifest.paths:
+        entry = tracked.get(path)
+        if entry is None:
+            raise ArtifactError("manifest_path_not_tracked")
+        expected_git[path] = _git_snapshot(source_root, entry, manifest.max_file_bytes)
+    for snapshot in (manifest_snapshot, policy_snapshot, *expected_git.values()):
+        _assert_worktree_matches_git(
+            source_root,
+            snapshot,
+            max(manifest.max_file_bytes, DEFAULT_MAX_FILE_BYTES),
+        )
 
     (
         policy_document,
         guard_policy,
         policy_sha256,
         control_paths,
-    ) = _policy_contract(policy_file)
+    ) = _policy_contract_data(policy_snapshot.data)
     if policy_document.get("repository") != manifest.repository:
         raise ArtifactError("policy_manifest_repository_mismatch")
     expected = manifest.entry_by_path
@@ -1153,6 +1287,24 @@ def scan_artifact(
             )
             continue
         snapshots[path] = snapshot
+        expected_snapshot = expected_git.get(path)
+        if (
+            expected_snapshot is not None
+            and (
+                snapshot.sha256 != expected_snapshot.sha256
+                or snapshot.size != expected_snapshot.size
+                or _worktree_mode(os.stat(artifact_root / PurePosixPath(path)))
+                != expected_snapshot.git_mode
+            )
+        ):
+            findings.append(
+                Finding(
+                    "inventory",
+                    "artifact_commit_blob_mismatch",
+                    path,
+                    "git_object",
+                )
+            )
         categories = _path_categories(path, policy_document)
         if not categories:
             findings.append(
@@ -1174,7 +1326,7 @@ def scan_artifact(
     try:
         guard_report = publication_guard.scan_repository(
             artifact_root,
-            policy_path=policy_file,
+            policy_data=policy_snapshot.data,
             manifest=guard_paths,
             enforce_source_classification=False,
         )
@@ -1191,9 +1343,7 @@ def scan_artifact(
             )
 
     for path in sorted(control_paths & set(snapshots), key=_path_sort_key):
-        source_snapshot = _read_stable_file(
-            source_root, path, manifest.max_file_bytes
-        )
+        source_snapshot = expected_git[path]
         if snapshots[path].sha256 != source_snapshot.sha256:
             findings.append(
                 Finding(
@@ -1276,6 +1426,10 @@ def scan_artifact(
             {
                 "category": list(_path_categories(path, policy_document)),
                 "class": entry.publication_class if entry else "undeclared",
+                "git_blob_id": (
+                    expected_git[path].git_blob_id if path in expected_git else None
+                ),
+                "git_mode": expected_git[path].git_mode if path in expected_git else None,
                 "media_type": _media_type(path),
                 "origin": "generated-artifact",
                 "path": evidence_path(path),
@@ -1342,7 +1496,133 @@ def scan_artifact(
         "scanner_version": SCANNER_VERSION,
         "schema_version": 1,
         "source_file_count": len(expected),
+        "source_manifest_sha256": source_manifest_sha256,
     }
+
+
+def seal_artifact_payload(
+    artifact: str | os.PathLike[str],
+    payload: str | os.PathLike[str],
+    report: Mapping[str, Any],
+    *,
+    _post_scan_hook: Callable[[Path], None] | None = None,
+) -> dict[str, Any]:
+    try:
+        artifact_root = Path(artifact).resolve(strict=True)
+    except (OSError, RuntimeError) as error:
+        raise ArtifactError("artifact_root_unreadable") from error
+    if report.get("result") != "pass" or report.get("findings") != []:
+        raise ArtifactError("cannot_seal_denied_artifact")
+    payload_path = _outside_source(artifact_root, Path(payload))
+    if payload_path.name != "artifact.tar":
+        raise ArtifactError("pages_payload_name_invalid")
+    if _post_scan_hook is not None:
+        _post_scan_hook(artifact_root)
+
+    raw_records = report.get("coverage_records")
+    if not isinstance(raw_records, list):
+        raise ArtifactError("artifact_evidence_invalid")
+    records = {
+        record.get("path"): record
+        for record in raw_records
+        if isinstance(record, Mapping) and isinstance(record.get("path"), str)
+    }
+    inventory = report.get("inventory_paths")
+    if (
+        not isinstance(inventory, list)
+        or not inventory
+        or set(records) != set(inventory)
+        or len(records) != len(inventory)
+    ):
+        raise ArtifactError("artifact_evidence_invalid")
+
+    snapshots: list[FileSnapshot] = []
+    for path in sorted(inventory, key=_path_sort_key):
+        record = records[path]
+        snapshot = _read_stable_file(
+            artifact_root, path, max(int(record.get("size", 0)), 1)
+        )
+        if (
+            snapshot.sha256 != record.get("sha256")
+            or snapshot.size != record.get("size")
+            or _worktree_mode(os.stat(artifact_root / PurePosixPath(path)))
+            != record.get("git_mode")
+        ):
+            raise ArtifactError("artifact_changed_after_scan")
+        snapshots.append(snapshot)
+
+    try:
+        with payload_path.open("xb") as raw_stream:
+            with tarfile.open(
+                fileobj=raw_stream,
+                mode="w",
+                format=tarfile.GNU_FORMAT,
+            ) as archive:
+                for snapshot in snapshots:
+                    record = records[snapshot.path]
+                    info = tarfile.TarInfo(snapshot.path)
+                    info.size = snapshot.size
+                    info.mode = int(str(record["git_mode"]), 8) & 0o777
+                    info.uid = 0
+                    info.gid = 0
+                    info.uname = ""
+                    info.gname = ""
+                    info.mtime = 0
+                    archive.addfile(info, io.BytesIO(snapshot.data))
+    except (OSError, tarfile.TarError, ValueError, KeyError) as error:
+        payload_path.unlink(missing_ok=True)
+        raise ArtifactError("pages_payload_write_failed") from error
+
+    try:
+        payload_data = payload_path.read_bytes()
+    except OSError as error:
+        raise ArtifactError("pages_payload_unreadable") from error
+    sealed = dict(report)
+    sealed.update(
+        {
+            "payload_format": "github-pages-artifact.tar",
+            "payload_member_count": len(snapshots),
+            "payload_sha256": _sha256(payload_data),
+            "payload_size": len(payload_data),
+        }
+    )
+    return sealed
+
+
+def build_scan_seal(
+    source: str | os.PathLike[str],
+    artifact: str | os.PathLike[str],
+    payload: str | os.PathLike[str],
+    *,
+    manifest_path: str | os.PathLike[str] = MANIFEST_FILENAME,
+    policy_path: str | os.PathLike[str] = POLICY_FILENAME,
+    _post_scan_hook: Callable[[Path], None] | None = None,
+) -> dict[str, Any]:
+    try:
+        source_root = Path(source).resolve(strict=True)
+    except (OSError, RuntimeError) as error:
+        raise ArtifactError("source_root_unreadable") from error
+    _outside_source(source_root, Path(payload))
+    build_artifact(
+        source,
+        artifact,
+        manifest_path=manifest_path,
+        policy_path=policy_path,
+    )
+    report = scan_artifact(
+        source,
+        artifact,
+        manifest_path=manifest_path,
+        policy_path=policy_path,
+    )
+    if report["result"] != "pass":
+        return report
+    return seal_artifact_payload(
+        artifact,
+        payload,
+        report,
+        _post_scan_hook=_post_scan_hook,
+    )
 
 
 def _render_json(value: Mapping[str, Any], compact: bool) -> str:
@@ -1393,6 +1673,8 @@ def _parser() -> argparse.ArgumentParser:
         child.add_argument("--manifest", default=MANIFEST_FILENAME)
         child.add_argument("--policy", default=POLICY_FILENAME)
         child.add_argument("--artifact", required=True)
+        if command == "build-scan":
+            child.add_argument("--payload", required=True)
         child.add_argument("--evidence")
     return parser
 
@@ -1416,15 +1698,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 policy_path=args.policy,
             )
         else:
-            build_artifact(
+            report = build_scan_seal(
                 args.source,
                 args.artifact,
-                manifest_path=args.manifest,
-                policy_path=args.policy,
-            )
-            report = scan_artifact(
-                args.source,
-                args.artifact,
+                args.payload,
                 manifest_path=args.manifest,
                 policy_path=args.policy,
             )
