@@ -103,6 +103,8 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         _fail("concurrency_invalid")
     if _contains_key(document, "continue-on-error"):
         _fail("continue_on_error_forbidden")
+    if "env" in document:
+        _fail("workflow_level_runner_context")
 
     jobs = _jobs(document)
     if set(jobs) != {"gate", "deploy"}:
@@ -260,7 +262,7 @@ def validate_workflow_document(document: Mapping[str, Any]) -> dict[str, str]:
         if fragment not in validate_evidence:
             _fail("evidence_unbound")
 
-    env = document.get("env")
+    env = gate.get("env")
     if not isinstance(env, Mapping):
         _fail("paths_missing")
     pages_stage = env.get("PAGES_STAGE")

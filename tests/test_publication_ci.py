@@ -80,7 +80,16 @@ class PublicationWorkflowTests(unittest.TestCase):
         stale_group = copy.deepcopy(self.document())
         stale_group["concurrency"]["group"] = "publication-pages"
 
-        for document in (permissions, timeout, concurrency, stale_group):
+        workflow_env = copy.deepcopy(self.document())
+        workflow_env["env"] = workflow_env["jobs"]["gate"].pop("env")
+
+        for document in (
+            permissions,
+            timeout,
+            concurrency,
+            stale_group,
+            workflow_env,
+        ):
             with self.subTest():
                 self.assert_rejected(document)
 
@@ -111,14 +120,12 @@ class PublicationWorkflowTests(unittest.TestCase):
         )
 
         overlap = copy.deepcopy(self.document())
-        overlap["env"]["PUBLICATION_EVIDENCE"] = overlap["env"]["PAGES_STAGE"] + (
-            "/evidence.json"
-        )
+        gate_env = overlap["jobs"]["gate"]["env"]
+        gate_env["PUBLICATION_EVIDENCE"] = gate_env["PAGES_STAGE"] + "/evidence.json"
 
         source_overlap = copy.deepcopy(self.document())
-        source_overlap["env"]["SOURCE_EVIDENCE"] = source_overlap["env"][
-            "PAGES_PAYLOAD"
-        ]
+        source_gate_env = source_overlap["jobs"]["gate"]["env"]
+        source_gate_env["SOURCE_EVIDENCE"] = source_gate_env["PAGES_PAYLOAD"]
 
         wrong_artifact = copy.deepcopy(self.document())
         wrong_artifact["jobs"]["deploy"]["steps"][0]["with"]["artifact_name"] = (

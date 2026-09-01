@@ -11,12 +11,6 @@
     "group": "publication-pages-${{ github.ref }}",
     "cancel-in-progress": true
   },
-  "env": {
-    "PAGES_STAGE": "${{ runner.temp }}/rapterbox-pages-stage-${{ github.run_id }}-${{ github.run_attempt }}",
-    "PAGES_PAYLOAD": "${{ runner.temp }}/rapterbox-pages-payload-${{ github.run_id }}-${{ github.run_attempt }}/artifact.tar",
-    "PUBLICATION_EVIDENCE": "${{ runner.temp }}/publication-artifact-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json",
-    "SOURCE_EVIDENCE": "${{ runner.temp }}/publication-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json"
-  },
   "defaults": {
     "run": {
       "shell": "bash"
@@ -30,6 +24,12 @@
       "outputs": {
         "checked_commit": "${{ steps.bind.outputs.checked_commit }}",
         "pages_artifact_name": "${{ steps.bind.outputs.pages_artifact_name }}"
+      },
+      "env": {
+        "PAGES_STAGE": "${{ runner.temp }}/rapterbox-pages-stage-${{ github.run_id }}-${{ github.run_attempt }}",
+        "PAGES_PAYLOAD": "${{ runner.temp }}/rapterbox-pages-payload-${{ github.run_id }}-${{ github.run_attempt }}/artifact.tar",
+        "PUBLICATION_EVIDENCE": "${{ runner.temp }}/publication-artifact-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json",
+        "SOURCE_EVIDENCE": "${{ runner.temp }}/publication-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json"
       },
       "steps": [
         {
