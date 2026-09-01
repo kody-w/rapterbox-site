@@ -135,6 +135,7 @@ class PublicationArtifactTests(unittest.TestCase):
         self.assertEqual("pass", report["result"])
         self.assertEqual(31, report["generated_artifact_count"])
         self.assertEqual(31, report["scan_counts"]["scanned_paths"])
+        self.assertEqual(148, report["scan_counts"]["links"])
         self.assertEqual(
             publication_artifact.load_manifest(
                 source / publication_artifact.MANIFEST_FILENAME
@@ -145,6 +146,7 @@ class PublicationArtifactTests(unittest.TestCase):
         self.assertFalse((artifact / "scripts").exists())
         self.assertFalse((artifact / "tests").exists())
         self.assertFalse((artifact / "waitlist").exists())
+        self.assertFalse((artifact / "docs" / "PUBLIC-IP-AUDIT.md").exists())
         categories = {
             record["path"]: record["category"] for record in report["coverage_records"]
         }
@@ -182,6 +184,43 @@ class PublicationArtifactTests(unittest.TestCase):
         self.assertIn("forbidden_phrase", self.rules(report))
         self.assertNotIn(phrase, json.dumps(report).casefold())
 
+    def test_generated_all_doctrine_classes_survive_html_and_unicode_obfuscation(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        values = [
+            "Co&#100;e R\u200bed",
+            "LLC&#32;Constitution",
+            "Ten\u200b Commandments",
+            "private&#32;doctrine",
+            "ownership&#32;administration",
+            "print-ready&#32;doctrine",
+        ]
+        (artifact / "index.html").write_text(
+            "\n".join(values) + "\n", encoding="utf-8"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        detectors = {
+            finding["detector"]
+            for finding in report["findings"]
+            if finding["rule"] == "forbidden_phrase"
+        }
+        self.assertEqual(
+            {
+                "forbidden-code-red",
+                "forbidden-llc-constitution",
+                "forbidden-ten-commandments",
+                "forbidden-private-doctrine",
+                "forbidden-ownership-administration",
+                "forbidden-print-ready-doctrine",
+            },
+            detectors,
+        )
+        serialized = json.dumps(report).casefold()
+        for value in values:
+            self.assertNotIn(value.casefold(), serialized)
+
     def test_generated_ownership_percentage_is_denied_without_echo(self) -> None:
         source = self.fixture_source()
         artifact = self.build(source)
@@ -192,6 +231,50 @@ class PublicationArtifactTests(unittest.TestCase):
 
         self.assertIn("ownership_percentage_claim", self.rules(report))
         self.assertNotIn("51%", json.dumps(report))
+
+    def test_generated_obfuscated_ownership_is_denied_in_both_orders(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        values = [
+            "owns \uff15\uff11&#37; of the venture",
+            "49&#32;percent ownership interest",
+        ]
+        (artifact / "index.html").write_text(
+            "\n".join(values) + "\n", encoding="utf-8"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        ownership = [
+            finding
+            for finding in report["findings"]
+            if finding["rule"] == "ownership_percentage_claim"
+        ]
+        self.assertEqual(2, len(ownership))
+        for value in values:
+            self.assertNotIn(value, json.dumps(report))
+
+    def test_generated_downloadable_doctrine_url_and_pdf_name_are_denied(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        url = "https://example.test/" + "private-" + "doctrine.pdf"
+        (artifact / "index.html").write_text(url + "\n", encoding="utf-8")
+        filename = "\uff30\uff32\uff29\uff36\uff21\uff34\uff25_\uff24\uff2f\uff23\uff34\uff32\uff29\uff2e\uff25.pdf"
+        (artifact / filename).write_bytes(b"%PDF-1.4\n")
+        phrase = "private" + " doctrine"
+        (artifact / "brochure.pdf").write_bytes(
+            b"%PDF-1.4\n" + phrase.encode("utf-8") + b"\n"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertIn("forbidden_downloadable_document", self.rules(report))
+        self.assertIn("forbidden_filename", self.rules(report))
+        self.assertIn("forbidden_phrase", self.rules(report))
+        serialized = json.dumps(report)
+        self.assertNotIn(url, serialized)
+        self.assertNotIn(filename, serialized)
+        self.assertNotIn(phrase, serialized)
 
     def test_generated_unverified_repository_link_is_redacted_and_denied(self) -> None:
         source = self.fixture_source()
@@ -209,6 +292,61 @@ class PublicationArtifactTests(unittest.TestCase):
         rendered = json.dumps(report)
         self.assertNotIn(slug, rendered)
         self.assertNotIn(url, rendered)
+
+    def test_generated_hostile_urls_are_fail_closed_redacted_and_deterministic(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        candidates = [
+            "https&#58;//github&#46;com/unknown/private",
+            "//github.com/unknown/scheme-relative",
+            "https://" + "operator@" + "example.test/path",
+            "https://[not-ipv6/path",
+            "https://example.test/%GG",
+            "http://[::1]/",
+        ]
+        (artifact / "index.html").write_text(
+            "\n".join(candidates) + "\n", encoding="utf-8"
+        )
+
+        first = publication_artifact.scan_artifact(source, artifact)
+        second = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertEqual(first, second)
+        rules = self.rules(first)
+        self.assertIn("private_repository_link", rules)
+        self.assertIn("unverified_repository_link", rules)
+        self.assertIn("credentialed_link", rules)
+        self.assertIn("malformed_url", rules)
+        self.assertIn("invalid_link", rules)
+        self.assertIn("forbidden_host_link", rules)
+        serialized = json.dumps(first)
+        for candidate in candidates:
+            self.assertNotIn(candidate, serialized)
+
+    def test_generated_valid_public_ipv6_url_does_not_crash(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        value = "https://[2606:4700:4700::1111]/dns-query"
+        (artifact / "index.html").write_text(value + "\n", encoding="utf-8")
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertEqual("deny", report["result"])
+        self.assertIn("unverified_external_link", self.rules(report))
+        self.assertNotIn("invalid_link", self.rules(report))
+
+    def test_generated_encoded_internal_traversal_is_redacted_and_denied(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        target = "%2e%2e/" + "private"
+        (artifact / "index.html").write_text(
+            '<a href="' + target + '">escape</a>\n', encoding="utf-8"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertIn("missing_internal_link_target", self.rules(report))
+        self.assertNotIn(target, json.dumps(report))
 
     def test_generated_secret_and_pii_shapes_are_denied_without_values(self) -> None:
         source = self.fixture_source()
@@ -231,6 +369,69 @@ class PublicationArtifactTests(unittest.TestCase):
         self.assertNotIn(secret, rendered)
         self.assertNotIn(email, rendered)
 
+    def test_generated_comprehensive_secret_and_customer_shapes_are_denied(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        values = {
+            "private_key": "-----BEGIN " + "PRIVATE KEY-----",
+            "aws_access_key": "AK" + "IA" + ("A" * 16),
+            "github_token": "gh" + "p_" + ("a" * 24),
+            "openai_token": "s" + "k-" + ("a" * 24),
+            "google_api_key": "AI" + "za" + ("A" * 35),
+            "stripe_secret_key": "sk_" + "live_" + ("a" * 24),
+            "slack_token": "xo" + "xb-" + ("1" * 12),
+            "jwt": "ey" + "J" + ("a" * 10) + "." + ("b" * 10) + "." + ("c" * 10),
+            "credential_assignment": "auth_" + "token=" + ("s" * 20),
+            "credential_url": (
+                "https://" + "user:" + "password123@" + "example.test/data"
+            ),
+            "connection_string_secret": "Client" + "Secret=" + ("A" * 24),
+            "webhook_secret": (
+                "https://hooks."
+                + "slack.com/services/"
+                + ("A" * 8)
+                + "/"
+                + ("B" * 8)
+                + "/"
+                + ("C" * 16)
+            ),
+            "email_address": "person" + "@" + "example.test",
+            "us_ssn": "123" + "-45-" + "6789",
+            "phone_number": "phone: " + "(212) " + "555-0199",
+            "postal_address": "address: " + "123 Main Street",
+            "submitted_customer_record": (
+                '{"submission_' + 'id":"fixture","email":"person'
+                + "@"
+                + 'example.test"}'
+            ),
+        }
+        (artifact / "index.html").write_text(
+            "\n".join(values.values()) + "\n", encoding="utf-8"
+        )
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        detectors = {
+            finding["detector"]
+            for finding in report["findings"]
+            if finding["rule"] == "sensitive_data_shape"
+        }
+        self.assertEqual(set(values), detectors)
+        serialized = json.dumps(report)
+        for value in values.values():
+            self.assertNotIn(value, serialized)
+
+    def test_generated_binary_extra_still_receives_real_secret_checks(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        value = "gh" + "p_" + ("q" * 24)
+        (artifact / "packed.bin").write_bytes(b"\x00" + value.encode() + b"\x00")
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertIn("extra_artifact_path", self.rules(report))
+        self.assertIn("sensitive_data_shape", self.rules(report))
+        self.assertNotIn(value, json.dumps(report))
     def test_builder_rejects_symlink_escape_and_manifest_traversal(self) -> None:
         outside = self.work / "outside.html"
         outside.write_text("outside\n", encoding="utf-8")
@@ -266,6 +467,44 @@ class PublicationArtifactTests(unittest.TestCase):
 
         self.assertIn("artifact_symlink", self.rules(report))
         self.assertIn("missing_artifact_path", self.rules(report))
+
+    def test_generated_invalid_utf8_fails_closed_but_still_has_coverage(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        (artifact / "index.html").write_bytes(b"\xffpublic text\n")
+
+        report = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertEqual("deny", report["result"])
+        self.assertIn("artifact_text_not_utf8", self.rules(report))
+        self.assertIn("invalid_utf8", self.rules(report))
+        record = next(
+            item for item in report["coverage_records"] if item["path"] == "index.html"
+        )
+        self.assertEqual("deny", record["scanner_status"])
+
+    def test_generated_oversized_and_special_files_fail_closed(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        (artifact / "index.html").write_bytes(
+            b"x" * (5 * 1024 * 1024 + 1)
+        )
+        oversized = publication_artifact.scan_artifact(source, artifact)
+        self.assertIn("artifact_file_too_large", self.rules(oversized))
+        self.assertIn("file_too_large", self.rules(oversized))
+        self.assertIn("publication_policy_unscanned", self.rules(oversized))
+
+        shutil.rmtree(artifact)
+        artifact = self.build(source)
+        special = artifact / "extra-pipe"
+        try:
+            os.mkfifo(special)
+        except (AttributeError, NotImplementedError, OSError):
+            self.skipTest("named pipes are unavailable")
+        special_report = publication_artifact.scan_artifact(source, artifact)
+        self.assertIn(
+            "unsupported_artifact_file_type", self.rules(special_report)
+        )
 
     def test_undeclared_extra_and_missing_declared_path_are_denied(self) -> None:
         source = self.fixture_source()
@@ -325,6 +564,26 @@ class PublicationArtifactTests(unittest.TestCase):
                 ):
                     publication_artifact.load_manifest(manifest_path)
 
+    def test_manifest_rejects_duplicate_keys_and_malformed_origins(self) -> None:
+        manifest_path = self.work / publication_artifact.MANIFEST_FILENAME
+        manifest_path.write_text(
+            '{"document_type":"publication-manifest",'
+            '"document_type":"publication-manifest"}',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+            publication_artifact.ArtifactError, "invalid_json"
+        ):
+            publication_artifact.load_manifest(manifest_path)
+
+        document = self.manifest_document([("index.html", "site-content")])
+        document["allowed_external_origins"] = ["https://[broken"]
+        manifest_path.write_text(json.dumps(document), encoding="utf-8")
+        with self.assertRaisesRegex(
+            publication_artifact.ArtifactError, "invalid_external_origin"
+        ):
+            publication_artifact.load_manifest(manifest_path)
+
     def test_builder_detects_source_mutation_and_rejects_output_overlap(self) -> None:
         source = self.fixture_source()
         mutated = False
@@ -369,6 +628,68 @@ class PublicationArtifactTests(unittest.TestCase):
 
         self.assertEqual("deny", report["result"])
         self.assertIn("invalid_json", self.rules(report))
+
+    def test_generated_parse_failures_cover_json_jsonl_xml_and_html(self) -> None:
+        source = self.fixture_source(
+            paths=[
+                ("agent.json", "site-content"),
+                ("index.html", "site-content"),
+                ("lessons.jsonl", "site-content"),
+                ("sitemap.xml", "site-content"),
+            ],
+            contents={
+                "agent.json": '{"ok":true}\n',
+                "index.html": "<!doctype html><title>Safe</title>\n",
+                "lessons.jsonl": '{"ok":true}\n',
+                "sitemap.xml": "<root />\n",
+            },
+        )
+        artifact = self.build(source)
+        (artifact / "agent.json").write_text(
+            '{"duplicate":1,"duplicate":2}\n', encoding="utf-8"
+        )
+        (artifact / "lessons.jsonl").write_text(
+            '{"valid":true}\n{"broken":\n', encoding="utf-8"
+        )
+        (artifact / "sitemap.xml").write_text("<root>", encoding="utf-8")
+        (artifact / "index.html").write_text(
+            '<script type="application/ld+json">{"url":',
+            encoding="utf-8",
+        )
+
+        first = publication_artifact.scan_artifact(source, artifact)
+        second = publication_artifact.scan_artifact(source, artifact)
+
+        self.assertEqual(first, second)
+        parse_findings = [
+            finding
+            for finding in first["findings"]
+            if finding["gate"] == "parse"
+        ]
+        self.assertEqual(
+            {
+                ("agent.json", "invalid_json"),
+                ("index.html", "invalid_html"),
+                ("lessons.jsonl", "invalid_json"),
+                ("sitemap.xml", "invalid_xml"),
+            },
+            {(finding["path"], finding["rule"]) for finding in parse_findings},
+        )
+
+    def test_invalid_policy_regex_fails_closed_with_sanitized_error(self) -> None:
+        source = self.fixture_source()
+        artifact = self.build(source)
+        policy_path = source / publication_artifact.POLICY_FILENAME
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["public_forbidden"]["phrase_patterns"]["patterns"].append(
+            {"id": "invalid", "regex": "("}
+        )
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            publication_artifact.ArtifactError, "policy_invalid"
+        ):
+            publication_artifact.scan_artifact(source, artifact)
 
     def test_evidence_is_byte_deterministic_and_not_a_rapp_frame(self) -> None:
         source = self.fixture_source()

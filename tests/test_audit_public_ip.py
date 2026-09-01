@@ -145,7 +145,9 @@ class PublicIpAuditTests(unittest.TestCase):
         for value in (
             "http://127.0.0.1/secret",
             "http://10.0.0.1/secret",
-            "https://user:password@example.com/private",
+            "https://" + "user:" + "password@" + "example.com/private",
+            "https://[" + "not-ipv6/path",
+            "https://example.com/%" + "GG",
             "file:///private/data",
         ):
             with self.subTest(value=value):
