@@ -20,6 +20,7 @@ from scripts import validate_publication_evidence
 
 class PublicationEvidenceTests(unittest.TestCase):
     work = Path(__file__).parent / ".publication-evidence-work"
+    handoff_path = ROOT / "docs" / "PUBLICATION-OPERATOR-HANDOFF.json"
 
     def setUp(self) -> None:
         shutil.rmtree(self.work, ignore_errors=True)
@@ -177,6 +178,64 @@ class PublicationEvidenceTests(unittest.TestCase):
         )
         self.assertEqual(candidates, by_class["publication-candidate"])
         self.assertEqual(controls, by_class["publication-control"])
+        self.assertIn(
+            "docs/PUBLICATION-OPERATOR-HANDOFF.json",
+            by_class["publication-tooling"],
+        )
+        self.assertNotIn(
+            "docs/PUBLICATION-OPERATOR-HANDOFF.json",
+            artifact_manifest.paths,
+        )
+
+    def test_operator_handoff_is_exact_nondeploy_state(self) -> None:
+        handoff = json.loads(self.handoff_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            {
+                "schema",
+                "classification",
+                "release_frame",
+                "integration_base",
+                "deployment",
+                "publication_evidence",
+                "required_check",
+                "operator_actions",
+                "history_rewrite",
+            },
+            set(handoff),
+        )
+        self.assertEqual("publication-tooling", handoff["classification"])
+        self.assertEqual("nondeploy", handoff["deployment"])
+        self.assertEqual("Publication gate", handoff["required_check"]["context"])
+        self.assertTrue(handoff["required_check"]["strict"])
+        self.assertFalse(handoff["publication_evidence"]["rapp_frame"])
+        self.assertFalse(
+            handoff["publication_evidence"]["claims_rapp_1_conformance"]
+        )
+        actions = {item["id"]: item for item in handoff["operator_actions"]}
+        self.assertEqual(
+            {
+                "pages-build-source",
+                "protect-main",
+                "restrict-pages-environment",
+                "gitguardian-rappid-disposition",
+            },
+            set(actions),
+        )
+        self.assertTrue(
+            all(item["state"] == "needs-operator-apply" for item in actions.values())
+        )
+        self.assertEqual(
+            "Publication gate",
+            actions["protect-main"]["required_check"],
+        )
+        self.assertFalse(
+            actions["restrict-pages-environment"]["custom_branch_policies"]
+        )
+        self.assertFalse(
+            actions["gitguardian-rappid-disposition"]["disable_scanning"]
+        )
+        self.assertEqual("blocked", handoff["history_rewrite"]["state"])
 
     def test_valid_source_evidence_is_complete_and_outside_source(self) -> None:
         source, manifest_path, evidence_path, _ = self.built_source_evidence()
