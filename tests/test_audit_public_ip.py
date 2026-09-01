@@ -206,6 +206,48 @@ class PublicIpAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(audit.AuditInputError, "invalid JSON input"):
             audit.classify_search_results(search, [])
 
+    def test_cli_invalid_json_inputs_emit_probe_errors_and_continue(self) -> None:
+        fixture = self.work / "fixture.json"
+        invalid_search = self.work / "invalid-search.json"
+        fixture.write_bytes(b'{"responses":' + b"\xff")
+        invalid_search.write_bytes(b'[{"url":' + b"\xff")
+        valid_search = self.write_json(
+            "valid-search.json",
+            [{"url": "https://cache.example.net/result", "cached": True}],
+        )
+        json_report = self.work / "report.json"
+        markdown_report = self.work / "report.md"
+
+        exit_code = audit.main(
+            [
+                "--url",
+                "https://example.com/current",
+                "--search-results",
+                str(invalid_search),
+                "--search-results",
+                str(valid_search),
+                "--fixture-json",
+                str(fixture),
+                "--offline",
+                "--json-report",
+                str(json_report),
+                "--markdown-report",
+                str(markdown_report),
+            ]
+        )
+
+        report = json.loads(json_report.read_text(encoding="utf-8"))
+        classifications = [
+            artifact["classification"] for artifact in report["artifacts"]
+        ]
+        rendered = json.dumps(report, sort_keys=True)
+        self.assertEqual(1, exit_code)
+        self.assertEqual(3, classifications.count("probe-error"))
+        self.assertIn("cached-indicator", classifications)
+        self.assertNotIn(str(fixture), rendered)
+        self.assertNotIn(str(invalid_search), rendered)
+        self.assertNotIn("\ufffd", rendered)
+
     def test_offline_cli_writes_deterministic_json_and_markdown(self) -> None:
         target = "https://example.com/removed"
         document = "https://links.example.org/index.html"

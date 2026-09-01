@@ -562,6 +562,15 @@ def classify_search_results(
     return artifacts
 
 
+def _invalid_input_artifact(kind: str, index: int) -> Artifact:
+    return Artifact(
+        kind,
+        f"redacted-{kind}-input#{index}",
+        "probe-error",
+        detail="invalid-json-input",
+    )
+
+
 def build_report(artifacts: Sequence[Artifact], generated_at: str | None) -> dict[str, Any]:
     counts = Counter(artifact.classification for artifact in artifacts)
     report: dict[str, Any] = {
@@ -697,11 +706,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         forbidden = [
             validate_public_url(value, resolve=False) for value in args.forbidden_url
         ]
+        artifacts: list[Artifact] = []
         network = NetworkTransport(args.timeout, args.max_bytes)
         if args.fixture_json:
-            fallback = None if args.offline else network
+            try:
+                fixture = load_fixture(args.fixture_json)
+            except AuditInputError:
+                artifacts.append(_invalid_input_artifact("fixture", 1))
+                fixture = {}
+                fallback = None
+            else:
+                fallback = None if args.offline else network
             transport: Any = FixtureTransport(
-                load_fixture(args.fixture_json),
+                fixture,
                 fallback=fallback,
                 max_bytes=args.max_bytes,
             )
@@ -710,15 +727,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             transport = network
 
-        artifacts: list[Artifact] = []
         artifacts.extend(classify_url(url, transport) for url in args.url)
         artifacts.extend(classify_repo(repo, transport) for repo in args.repo)
         artifacts.extend(
             classify_link_document(document, forbidden, transport)
             for document in args.link_document
         )
-        for path in args.search_results:
-            artifacts.extend(classify_search_results(path, forbidden))
+        for index, path in enumerate(args.search_results, start=1):
+            try:
+                artifacts.extend(classify_search_results(path, forbidden))
+            except AuditInputError:
+                artifacts.append(_invalid_input_artifact("search-result", index))
         report = build_report(artifacts, args.generated_at)
         write_reports(report, args.json_report, args.markdown_report)
     except AuditInputError as exc:
