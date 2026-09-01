@@ -119,6 +119,24 @@ artifact. A nonzero exit, absent evidence, non-`pass` result, stale
 policy/manifest digest, or upload of the repository root must block deployment.
 The evidence is publication evidence only and is never a RAPP/1 frame.
 
+CI source scanning uses `/PUBLICATION-SOURCE-MANIFEST.json` as the explicit,
+default-deny classification interface. Pull requests build and validate the
+same exact artifact but never upload a Pages artifact or deploy. A protected
+default-branch push may upload and deploy only the staging directory bound to
+that checked commit after every source, release, artifact, and evidence gate
+passes.
+
+Private-safe JSON evidence is retained as an access-controlled CI artifact for
+seven days. It is not copied into the Pages directory, is not publicly
+deployed, contains no candidate bytes or detected values, and emits no RAPP or
+RAPP/1 artifact.
+
+Frame 10 must set the repository Pages source to **GitHub Actions**, protect the
+default branch with the publication gate as a required check, and restrict the
+`github-pages` environment to protected default-branch deployments. Until
+those repository settings are applied, no branch-root Pages fallback is
+approved.
+
 ## Evidence
 
 Evidence is bound to the exact policy hash, commit, and generated-artifact
