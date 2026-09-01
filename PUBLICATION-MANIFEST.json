@@ -1,0 +1,145 @@
+{
+  "document_type": "publication-manifest",
+  "schema_version": 1,
+  "repository": "kody-w/rapterbox-site",
+  "default_disposition": "deny",
+  "artifact_boundary": "publication evidence only; emits no RAPP or RAPP/1 protocol artifacts",
+  "max_file_bytes": 5242880,
+  "site_hosts": [
+    "rapterbox.com",
+    "www.rapterbox.com"
+  ],
+  "allowed_external_origins": [
+    "http://www.sitemaps.org",
+    "https://formspree.io",
+    "https://kody-w.github.io",
+    "https://rappter.com",
+    "https://schema.org"
+  ],
+  "paths": [
+    {
+      "path": ".nojekyll",
+      "class": "site-content"
+    },
+    {
+      "path": ".well-known/agent.json",
+      "class": "site-content"
+    },
+    {
+      "path": "CNAME",
+      "class": "site-content"
+    },
+    {
+      "path": "PUBLICATION-POLICY.json",
+      "class": "publication-control"
+    },
+    {
+      "path": "agent.json",
+      "class": "site-content"
+    },
+    {
+      "path": "ai.html",
+      "class": "site-content"
+    },
+    {
+      "path": "docs/PUBLICATION-BOUNDARY.md",
+      "class": "publication-control"
+    },
+    {
+      "path": "dogg.html",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/0.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/1.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/2.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/3.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/4.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/5.json",
+      "class": "site-content"
+    },
+    {
+      "path": "frames/HEAD.json",
+      "class": "site-content"
+    },
+    {
+      "path": "holo/index.html",
+      "class": "site-content"
+    },
+    {
+      "path": "index.html",
+      "class": "site-content"
+    },
+    {
+      "path": "intake.html",
+      "class": "site-content"
+    },
+    {
+      "path": "invite.html",
+      "class": "site-content"
+    },
+    {
+      "path": "lessons.jsonl",
+      "class": "site-content"
+    },
+    {
+      "path": "llms.txt",
+      "class": "site-content"
+    },
+    {
+      "path": "privacy/index.html",
+      "class": "site-content"
+    },
+    {
+      "path": "rapp.html",
+      "class": "site-content"
+    },
+    {
+      "path": "robots.txt",
+      "class": "site-content"
+    },
+    {
+      "path": "silent-failures.html",
+      "class": "site-content"
+    },
+    {
+      "path": "sitemap.xml",
+      "class": "site-content"
+    },
+    {
+      "path": "support/index.html",
+      "class": "site-content"
+    },
+    {
+      "path": "tiers.json",
+      "class": "site-content"
+    },
+    {
+      "path": "values/index.html",
+      "class": "site-content"
+    },
+    {
+      "path": "waitlist-config.js",
+      "class": "site-content"
+    },
+    {
+      "path": "wrong-game.html",
+      "class": "site-content"
+    }
+  ]
+}

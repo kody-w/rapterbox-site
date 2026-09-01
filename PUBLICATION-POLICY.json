@@ -1,7 +1,7 @@
 {
   "document_type": "publication-policy",
   "policy_id": "kody-w/rapterbox-site:public-publication-boundary",
-  "policy_version": "1.0.0",
+  "policy_version": "1.1.0",
   "repository": "kody-w/rapterbox-site",
   "normative": true,
   "default_disposition": "deny",
@@ -131,6 +131,32 @@
         ],
         "categories": [
           "customer-facing-terms"
+        ]
+      },
+      {
+        "patterns": [
+          "/holo/index.html"
+        ],
+        "categories": [
+          "product-summary"
+        ]
+      },
+      {
+        "patterns": [
+          "/values/index.html"
+        ],
+        "categories": [
+          "product-summary",
+          "customer-facing-terms"
+        ]
+      },
+      {
+        "patterns": [
+          "/support/index.html"
+        ],
+        "categories": [
+          "product-summary",
+          "public-site-operation"
         ]
       },
       {
@@ -348,9 +374,16 @@
       "dev.azure.com"
     ],
     "allowed_repository_slugs_case_insensitive": [
+      "kody-w/dogg",
+      "kody-w/dogg-markets",
+      "kody-w/dogg-planet",
+      "kody-w/doggcast",
+      "kody-w/rapp-zoo",
       "kody-w/rapterbox-site",
       "kody-w/RAPP",
-      "kody-w/rapp-1"
+      "kody-w/rapp-1",
+      "kody-w/rappvision-rappterbox",
+      "rbox-rappters-2026/dogg-attention"
     ],
     "forbidden_repository_slug_patterns": {
       "engine": "re2",
