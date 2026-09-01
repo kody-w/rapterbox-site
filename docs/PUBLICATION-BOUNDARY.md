@@ -124,10 +124,13 @@ All output paths must be outside the checkout, and evidence must remain outside 
 artifact. The artifact scanner records each Git blob ID, mode, SHA-256, and
 size. A nonzero exit, absent evidence, non-`pass` result, stale
 commit/policy/manifest binding, payload substitution, or upload of the
-repository root must block deployment. The mutable staging directory is
-deleted before a final payload-only validation, and the directly uploaded
-Pages artifact contains only the already validated `artifact.tar`. The
-evidence is publication evidence only and is never a RAPP/1 frame.
+repository root must block deployment. Immediately before upload, CI verifies
+both the staging directory and deterministic `artifact.tar` against the same
+evidence. The immutable-pinned GitHub Pages upload action then packages that
+exact staging directory in the service-required format, with no
+repository-controlled step in between. The deterministic tar remains an
+independent byte receipt. The evidence is publication evidence only and is
+never a RAPP/1 frame.
 
 Frame 10 can reproduce the complete local gate with:
 
@@ -147,8 +150,8 @@ the exact commit, policy digest, source-manifest digest, source-manifest
 class, policy classification, blob ID, mode, SHA-256, size, and counts. Pull
 requests build and validate the same exact payload but never upload a Pages
 artifact or deploy. A protected default-branch push may upload and deploy
-only the sealed payload bound to the checked push commit after every source,
-release, artifact, and evidence gate passes.
+only the verified staging bytes bound to the checked push commit after every
+source, release, artifact, and evidence gate passes.
 
 Validated source and artifact evidence are retained together as an
 access-controlled CI artifact for seven days, separate from the Pages

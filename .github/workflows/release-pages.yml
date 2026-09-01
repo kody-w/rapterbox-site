@@ -103,19 +103,16 @@
         {
           "name": "Final verify immutable Pages payload",
           "if": "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.ref_protected == true && github.sha == github.event.after }}",
-          "run": "set -euo pipefail\nrm -rf -- \"$PAGES_STAGE\"\ntest ! -e \"$PAGES_STAGE\"\ngit diff --quiet HEAD -- .\ngit diff --cached --quiet HEAD -- .\ntest -z \"$(git status --porcelain=v1 --untracked-files=all)\"\npython scripts/validate_publication_evidence.py artifact --source . --payload \"$PAGES_PAYLOAD\" --evidence \"$PUBLICATION_EVIDENCE\" --expected-commit \"$GITHUB_SHA\""
+          "run": "set -euo pipefail\ntest -d \"$PAGES_STAGE\"\ngit diff --quiet HEAD -- .\ngit diff --cached --quiet HEAD -- .\ntest -z \"$(git status --porcelain=v1 --untracked-files=all)\"\npython scripts/validate_publication_evidence.py artifact --source . --artifact \"$PAGES_STAGE\" --payload \"$PAGES_PAYLOAD\" --evidence \"$PUBLICATION_EVIDENCE\" --expected-commit \"$GITHUB_SHA\""
         },
         {
           "name": "Upload exact Pages artifact",
           "if": "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.ref_protected == true && github.sha == github.event.after }}",
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9",
           "with": {
-            "compression-level": 0,
-            "if-no-files-found": "error",
-            "include-hidden-files": "false",
+            "include-hidden-files": "true",
             "name": "github-pages-${{ github.sha }}",
-            "overwrite": "false",
-            "path": "${{ env.PAGES_PAYLOAD }}",
+            "path": "${{ env.PAGES_STAGE }}",
             "retention-days": 1
           }
         }
