@@ -1,0 +1,638 @@
+{
+  "document_type": "publication-policy",
+  "policy_id": "kody-w/rapterbox-site:public-publication-boundary",
+  "policy_version": "1.3.0",
+  "repository": "kody-w/rapterbox-site",
+  "normative": true,
+  "default_disposition": "deny",
+  "decision_order": [
+    "deny_if_forbidden_filename_or_path",
+    "deny_if_forbidden_content_or_data",
+    "deny_if_forbidden_or_unverified_url",
+    "deny_if_path_has_no_allowed_public_category",
+    "allow_only_after_source_and_generated_artifact_scans_pass"
+  ],
+  "terminology": {
+    "Rappter": "Singular customer-facing brand or singular individual.",
+    "Rapter": "Plural of Rappter.",
+    "RapterBox LLC": "Company name.",
+    "RapterBox": "Separate company subproduct name.",
+    "RAPP": "External public open-source foundation name; only its non-confidential foundation and product-boundary material is public-eligible.",
+    "RAPP/1": "Protocol whose authority is the external public kody-w/rapp-1 repository."
+  },
+  "rapp_external_boundary": {
+    "foundation": {
+      "name": "RAPP",
+      "authority_repository": "kody-w/RAPP",
+      "relationship": "external_public_open_source_foundation",
+      "owned_by_rapterbox_llc": false,
+      "llc_ownership_claim": "forbidden"
+    },
+    "protocol": {
+      "name": "RAPP/1",
+      "spec_value": "rapp/1",
+      "authority_repository": "kody-w/rapp-1",
+      "relationship": "external_protocol_authority",
+      "local_redefinition": "forbidden"
+    },
+    "this_policy_artifact": {
+      "emits_rapp_artifacts": false,
+      "claims_rapp_1_protocol_conformance": false,
+      "boundary_statement": "This file defines a publication gate. It does not define, replace, extend, or emit the RAPP/1 frame, wire format, identity envelope, or lineage model."
+    },
+    "published_work_loop_records": {
+      "applies_when": "A candidate public artifact represents a work-loop record and claims RAPP/1 conformance.",
+      "exact_top_level_key_count": 11,
+      "exact_top_level_keys_in_order": [
+        "spec",
+        "kind",
+        "stream_id",
+        "seq",
+        "utc",
+        "payload",
+        "payload_hash",
+        "prev",
+        "prev_wave",
+        "sig",
+        "frame_hash"
+      ],
+      "required_spec_value": "rapp/1",
+      "additional_top_level_keys": "forbidden",
+      "alternate_frame_wire_or_identity_envelope": "forbidden",
+      "field_shapes_and_semantics_authority": "kody-w/rapp-1",
+      "data_slush": {
+        "allowed": true,
+        "allowed_json_pointer_prefix": "/payload",
+        "top_level_allowed": false,
+        "maximum_serialized_utf8_bytes": 16384,
+        "maximum_nesting_depth": 4,
+        "maximum_collection_items": 100,
+        "sensitivity_rule": "Must pass every secret, submitted-customer-data, non-public-legal-data, private-content, and URL prohibition in this policy."
+      },
+      "offspring_and_cross_outputs": {
+        "fresh_identity_required": true,
+        "typed_parent_lineage_required": true,
+        "authority_inheritance": "forbidden",
+        "identity_and_lineage_shape_authority": "kody-w/rapp-1",
+        "local_identity_or_lineage_shape_definition": "forbidden"
+      }
+    }
+  },
+  "public_allowed": {
+    "categories": [
+      {
+        "id": "product-summary",
+        "description": "Customer-facing descriptions of public RapterBox LLC products and offers."
+      },
+      {
+        "id": "customer-facing-terms",
+        "description": "Published terms, privacy notices, market rules, and other terms intentionally addressed to customers; non-public legal records remain forbidden."
+      },
+      {
+        "id": "waitlist",
+        "description": "Waitlist pages, forms, confirmations, and implementation assets that contain no submitted customer data or secrets."
+      },
+      {
+        "id": "rapp-public-boundary",
+        "description": "Non-confidential descriptions of the boundary between the public RAPP foundation and RapterBox LLC products."
+      },
+      {
+        "id": "public-site-operation",
+        "description": "Public routing, discovery, machine-readable product summaries, and static-site assets necessary to serve the allowed categories."
+      },
+      {
+        "id": "publication-control",
+        "description": "This policy and its human-readable boundary document."
+      }
+    ],
+    "path_rules": [
+      {
+        "patterns": [
+          "/*.html",
+          "/agent.json",
+          "/.well-known/agent.json",
+          "/llms.txt",
+          "/tiers.json",
+          "/frames/*.json",
+          "/lessons.jsonl"
+        ],
+        "categories": [
+          "product-summary",
+          "rapp-public-boundary",
+          "public-site-operation"
+        ]
+      },
+      {
+        "patterns": [
+          "/terms.html",
+          "/privacy.html",
+          "/terms/**",
+          "/privacy/**"
+        ],
+        "categories": [
+          "customer-facing-terms"
+        ]
+      },
+      {
+        "patterns": [
+          "/holo/index.html"
+        ],
+        "categories": [
+          "product-summary"
+        ]
+      },
+      {
+        "patterns": [
+          "/values/index.html"
+        ],
+        "categories": [
+          "product-summary",
+          "customer-facing-terms"
+        ]
+      },
+      {
+        "patterns": [
+          "/support/index.html"
+        ],
+        "categories": [
+          "product-summary",
+          "public-site-operation"
+        ]
+      },
+      {
+        "patterns": [
+          "/waitlist/**",
+          "/waitlist-config.js"
+        ],
+        "categories": [
+          "waitlist"
+        ]
+      },
+      {
+        "patterns": [
+          "/assets/**",
+          "/robots.txt",
+          "/sitemap.xml",
+          "/CNAME",
+          "/.nojekyll"
+        ],
+        "categories": [
+          "public-site-operation"
+        ]
+      },
+      {
+        "patterns": [
+          "/docs/public/**"
+        ],
+        "categories": [
+          "product-summary",
+          "customer-facing-terms",
+          "rapp-public-boundary"
+        ]
+      },
+      {
+        "patterns": [
+          "/PUBLICATION-POLICY.json",
+          "/docs/PUBLICATION-BOUNDARY.md"
+        ],
+        "categories": [
+          "publication-control"
+        ]
+      }
+    ],
+    "path_rule_is_not_sufficient": "A matching public path is eligible, not automatically allowed. Every prohibition and scan requirement still applies."
+  },
+  "public_forbidden": {
+    "categories": [
+      "CODE RED",
+      "LLC Constitution",
+      "Ten Commandments",
+      "private doctrine",
+      "ownership administration or percentages",
+      "private provenance manifests",
+      "print-ready doctrine",
+      "links to private repositories",
+      "secrets",
+      "submitted customer data",
+      "non-public legal data"
+    ],
+    "explicit_filenames_case_insensitive": [
+      "CODE RED.md",
+      "CODE-RED.md",
+      "CODE_RED.md",
+      "CODE-RED.pdf",
+      "LLC Constitution.md",
+      "LLC-CONSTITUTION.md",
+      "LLC_CONSTITUTION.md",
+      "LLC-CONSTITUTION.pdf",
+      "Ten Commandments.md",
+      "TEN-COMMANDMENTS.md",
+      "TEN_COMMANDMENTS.md",
+      "TEN-COMMANDMENTS.pdf",
+      "PRIVATE-DOCTRINE.md",
+      "PRIVATE-DOCTRINE.pdf",
+      "OWNERSHIP-ADMINISTRATION.md",
+      "OWNERSHIP-PERCENTAGES.csv",
+      "OWNERSHIP-PERCENTAGES.xlsx",
+      "CAP-TABLE.csv",
+      "CAP-TABLE.xlsx",
+      "PRIVATE-PROVENANCE-MANIFEST.json",
+      "PROVENANCE-MANIFEST.private.json",
+      "PRINT-READY-DOCTRINE.pdf"
+    ],
+    "filename_patterns": {
+      "engine": "re2",
+      "case_insensitive": true,
+      "match_target": "basename",
+      "patterns": [
+        "^code[ ._-]*red(?:[ ._-].*)?\\.(?:md|txt|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^(?:llc[ ._-]*)?constitution(?:[ ._-].*)?\\.(?:md|txt|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^(?:the[ ._-]*)?ten[ ._-]*commandments(?:[ ._-].*)?\\.(?:md|txt|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^(?:private[ ._-]*)?doctrine(?:[ ._-].*)?\\.(?:md|txt|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^(?:ownership|cap[ ._-]*table)(?:[ ._-].*)?\\.(?:md|txt|csv|xlsx?|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^(?:private[ ._-]*)?provenance[ ._-]*manifest(?:[ ._-].*)?\\.(?:md|txt|csv|html?|pdf|docx?|rtf|ya?ml|json)$",
+        "^print[ ._-]*ready(?:[ ._-].*)?doctrine(?:[ ._-].*)?\\.(?:md|txt|html?|pdf|docx?|rtf)$"
+      ]
+    },
+    "phrase_patterns": {
+      "engine": "re2",
+      "case_insensitive": true,
+      "normalization": [
+        "unicode_nfkc",
+        "decode_html_entities",
+        "collapse_whitespace"
+      ],
+      "patterns": [
+        {
+          "id": "forbidden-code-red",
+          "regex": "\\bcode[\\s_-]*red\\b"
+        },
+        {
+          "id": "forbidden-llc-constitution",
+          "regex": "\\b(?:the\\s+)?llc[\\s_-]*constitution\\b|\\bconstitution\\s+of\\s+rapterbox\\s+llc\\b"
+        },
+        {
+          "id": "forbidden-ten-commandments",
+          "regex": "\\b(?:the\\s+)?ten[\\s_-]*commandments\\b"
+        },
+        {
+          "id": "forbidden-private-doctrine",
+          "regex": "\\bprivate[\\s_-]*doctrine\\b|\\binternal[\\s_-]*doctrine\\b"
+        },
+        {
+          "id": "forbidden-ownership-administration",
+          "regex": "\\bownership[\\s_-]*(?:administration|percentage|percentages|allocation|allocations)\\b|\\bcap[\\s_-]*table\\b|\\bequity[\\s_-]*(?:split|allocation|percentage|percentages)\\b"
+        },
+        {
+          "id": "forbidden-private-provenance",
+          "regex": "\\bprivate[\\s_-]*provenance[\\s_-]*manifest\\b|\\bprovenance[\\s_-]*manifest\\b"
+        },
+        {
+          "id": "forbidden-print-ready-doctrine",
+          "regex": "\\bprint[\\s_-]*ready[\\s_-]*doctrine\\b"
+        },
+        {
+          "id": "forbidden-nonpublic-legal",
+          "regex": "\\battorney[\\s_-]*client[\\s_-]*privileged\\b|\\bprivileged[\\s_-]*and[\\s_-]*confidential\\b|\\blegal[\\s_-]*matter[\\s_-]*(?:id|number)\\b"
+        },
+        {
+          "id": "forbidden-rapp-llc-ownership-claim",
+          "regex": "\\brapterbox\\s+llc\\s+(?:owns|controls|holds\\s+ownership\\s+of)\\s+(?:the\\s+)?rapp\\b|\\brapp\\s+is\\s+(?:owned|controlled)\\s+by\\s+rapterbox\\s+llc\\b"
+        }
+      ]
+    },
+    "structured_data_detectors": [
+      {
+        "id": "secret-material",
+        "action": "deny",
+        "detect": [
+          "private_keys",
+          "api_tokens",
+          "access_tokens",
+          "passwords",
+          "connection_strings",
+          "webhook_secrets",
+          "real_secret_values_from_ci_secret_corpus"
+        ]
+      },
+      {
+        "id": "submitted-customer-data",
+        "action": "deny",
+        "detect": [
+          "submitted_names",
+          "email_address_values",
+          "phone_number_values",
+          "postal_address_values",
+          "customer_notes",
+          "customer_or_account_identifiers",
+          "waitlist_submission_records"
+        ],
+        "allow_placeholders": true
+      },
+      {
+        "id": "nonpublic-legal-data",
+        "action": "deny",
+        "detect": [
+          "privileged_communications",
+          "legal_matter_records",
+          "contracts_not_intentionally_published_as_customer_facing_terms",
+          "signatures",
+          "government_identifiers"
+        ]
+      }
+    ]
+  },
+  "structured_data_enforcement": {
+    "key_normalization": [
+      "unicode_nfkc",
+      "decode_html_entities",
+      "percent_decode",
+      "remove_zero_width",
+      "split_camel_case",
+      "collapse_non_alphanumeric"
+    ],
+    "encoded_key_decoding_passes": 2,
+    "maximum_nesting_depth": 32,
+    "maximum_collection_items": 10000,
+    "approved_placeholders": [
+      {
+        "id": "public-schema-field-description",
+        "detectors": [
+          "submitted_names",
+          "email_address_values",
+          "phone_number_values",
+          "postal_address_values",
+          "customer_notes",
+          "customer_or_account_identifiers",
+          "waitlist_submission_records"
+        ],
+        "paths": [
+          "/.well-known/agent.json",
+          "/agent.json",
+          "/frames/*.json",
+          "/lessons.jsonl"
+        ],
+        "patterns": [
+          "(?:string|text|number|boolean),\\s+(?:required|optional)(?:\\s+[—-]\\s+[^\\r\\n]{1,120})?",
+          "workflow description only, optional"
+        ]
+      },
+      {
+        "id": "explicit-secret-template-token",
+        "detectors": [
+          "private_keys",
+          "api_tokens",
+          "access_tokens",
+          "passwords",
+          "connection_strings",
+          "webhook_secrets",
+          "real_secret_values_from_ci_secret_corpus"
+        ],
+        "paths": [
+          "/**"
+        ],
+        "patterns": [
+          "<[A-Z][A-Z0-9_]{2,63}>",
+          "__[A-Z][A-Z0-9_]{2,63}__"
+        ]
+      }
+    ],
+    "approved_business_contacts": [
+      {
+        "id": "waitlist-sender-business-email",
+        "detectors": [
+          "email_address_values"
+        ],
+        "paths": [
+          "/waitlist/Code.gs"
+        ],
+        "value_sha256s": [
+          "d1dc757c784d3861d6472251343804d7686376c6974e03daa9bddd0499381aaf"
+        ]
+      }
+    ]
+  },
+  "url_policy": {
+    "parse_embedded_urls_in": [
+      "text",
+      "markup",
+      "code",
+      "metadata",
+      "redirects",
+      "source_maps",
+      "generated_assets"
+    ],
+    "forbidden_hosts_case_insensitive": [
+      "localhost",
+      "127.0.0.1",
+      "0.0.0.0",
+      "::1"
+    ],
+    "forbidden_host_suffixes_case_insensitive": [
+      ".internal",
+      ".local",
+      ".corp",
+      ".lan"
+    ],
+    "repository_hosts_case_insensitive": [
+      "github.com",
+      "www.github.com",
+      "raw.githubusercontent.com",
+      "api.github.com",
+      "gitlab.com",
+      "bitbucket.org",
+      "dev.azure.com"
+    ],
+    "allowed_repository_slugs_case_insensitive": [
+      "kody-w/dogg",
+      "kody-w/dogg-markets",
+      "kody-w/dogg-planet",
+      "kody-w/doggcast",
+      "kody-w/rapp-zoo",
+      "kody-w/rapterbox-site",
+      "kody-w/RAPP",
+      "kody-w/rapp-1",
+      "kody-w/rappvision-rappterbox",
+      "rbox-rappters-2026/dogg-attention"
+    ],
+    "allowlist_verification": {
+      "method": "unauthenticated GitHub repository API returned HTTP 200",
+      "verified_on": "2026-09-01",
+      "visibility": "public"
+    },
+    "forbidden_repository_slug_patterns": {
+      "engine": "re2",
+      "case_insensitive": true,
+      "patterns": [
+        "(?:^|/)(?:code[._-]*red)(?:$|/)",
+        "(?:^|/)(?:llc[._-]*)?constitution(?:$|/)",
+        "(?:^|/)(?:ten[._-]*commandments)(?:$|/)",
+        "(?:^|/)(?:private[._-]*doctrine|doctrine[._-]*private)(?:$|/)",
+        "(?:^|/)(?:ownership[._-]*admin|cap[._-]*table)(?:$|/)",
+        "(?:^|/)(?:private[._-]*)?provenance[._-]*manifest(?:$|/)"
+      ]
+    },
+    "repository_visibility_rule": "A repository URL is denied unless its slug is allowlisted above or scan evidence contains a successful public-visibility check for that exact canonical URL at scan time. Unknown, inaccessible, authenticated-only, or ambiguous visibility is private and denied.",
+    "non_repository_url_rule": "A URL on a forbidden host is denied. Other URLs require successful reachability without authentication and must not redirect to a forbidden host or private repository."
+  },
+  "control_file_pattern_exception": {
+    "paths": [
+      "/PUBLICATION-POLICY.json",
+      "/docs/PUBLICATION-BOUNDARY.md"
+    ],
+    "exception_scope": [
+      "public_forbidden.categories",
+      "public_forbidden.explicit_filenames_case_insensitive",
+      "public_forbidden.filename_patterns",
+      "public_forbidden.phrase_patterns",
+      "url_policy.forbidden_repository_slug_patterns"
+    ],
+    "requirements": "These files may name prohibitions and scanner expressions only. They may not contain source doctrine, excerpts, private repository URLs or slugs, secrets, customer data, non-public legal data, or other private content."
+  },
+  "source_tree_classification": {
+    "default_class": "repository-source-nondeploy",
+    "artifact_manifest": "PUBLICATION-MANIFEST.json",
+    "path_rules": [
+      {
+        "patterns": [
+          "/PUBLICATION-POLICY.json",
+          "/docs/PUBLICATION-BOUNDARY.md"
+        ],
+        "class": "publication-control",
+        "content_contract": "self-reference-safe",
+        "artifact_disposition": "publication-control"
+      },
+      {
+        "patterns": [
+          "/PUBLICATION-MANIFEST.json",
+          "/.github/workflows/release-pages.yml",
+          "/.gitignore",
+          "/release-pages-selftest.py",
+          "/scripts/run_guardrail_checks.sh"
+        ],
+        "class": "publication-build-control",
+        "content_contract": "full",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/scripts/publication_artifact.py",
+          "/scripts/publication_guard.py"
+        ],
+        "class": "guardrail-implementation",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/tests/test_publication_artifact.py",
+          "/tests/test_publication_guard_source.py"
+        ],
+        "class": "guardrail-synthetic-test-input",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/docs/PUBLIC-IP-AUDIT.md",
+          "/scripts/audit_public_ip.py",
+          "/tests/test_audit_public_ip.py"
+        ],
+        "class": "public-ip-audit-control-or-test-input",
+        "content_contract": "synthetic-test-input",
+        "artifact_disposition": "must-be-absent"
+      },
+      {
+        "patterns": [
+          "/waitlist/Code.gs",
+          "/waitlist/README.md",
+          "/waitlist/com.wildhaven.waitlist-texter.plist",
+          "/waitlist/texter.py"
+        ],
+        "class": "nondeploy-waitlist-implementation",
+        "content_contract": "nondeploy-operational-contact",
+        "artifact_disposition": "must-be-absent"
+      }
+    ]
+  },
+  "scan_requirement": {
+    "required_gates": [
+      "before_commit",
+      "before_merge",
+      "before_deploy",
+      "before_release"
+    ],
+    "scan_inputs": [
+      "tracked_source_files",
+      "untracked_files_selected_for_commit",
+      "rendered_site_output",
+      "bundled_and_minified_assets",
+      "generated_json_and_manifests",
+      "source_maps",
+      "generated_documents",
+      "archives_recursively",
+      "image_ocr_text",
+      "pdf_text_annotations_attachments_and_metadata",
+      "document_text_comments_revisions_and_metadata",
+      "redirect_targets_and_canonical_urls"
+    ],
+    "coverage_rule": "Every file destined for publication must produce a scanned, approved, or denied coverage record. Unsupported, unreadable, encrypted, truncated, or skipped files fail closed.",
+    "artifact_rule": "Generated artifacts must be built from exact commit-tree blobs and modes, scanned after generation, sealed into a deterministic Pages artifact.tar, and hash-validated immediately before upload. A clean source scan never substitutes for the generated-artifact scan.",
+    "pass_condition": "All files match an allowed path category, all required detectors complete, no deny rule matches, all URLs pass, and generated-artifact coverage is complete."
+  },
+  "evidence_behavior": {
+    "result_values": [
+      "pass",
+      "deny",
+      "error"
+    ],
+    "required_fields": [
+      "policy_id",
+      "policy_version",
+      "policy_sha256",
+      "repository",
+      "commit_sha",
+      "source_manifest_sha256",
+      "manifest_sha256",
+      "payload_sha256",
+      "scan_started_at",
+      "scan_completed_at",
+      "scanner_name",
+      "scanner_version",
+      "result",
+      "source_file_count",
+      "generated_artifact_count",
+      "coverage_records",
+      "rule_results"
+    ],
+    "coverage_record_fields": [
+      "path",
+      "sha256",
+      "git_blob_id",
+      "git_mode",
+      "media_type",
+      "origin",
+      "category",
+      "scanner_status"
+    ],
+    "violation_record_fields": [
+      "rule_id",
+      "path",
+      "sha256",
+      "location_kind",
+      "redacted_fingerprint"
+    ],
+    "never_record": [
+      "matched_secret_value",
+      "matched_customer_value",
+      "matched_legal_value",
+      "private_content_excerpt",
+      "private_repository_url_or_slug"
+    ],
+    "storage": "Evidence is retained in access-controlled CI or security storage and is not copied into the public site, public release artifacts, or public build logs.",
+    "on_pass": "Permit the publication gate to continue and retain the evidence record.",
+    "on_deny": "Block publication, quarantine or delete the candidate generated artifact, emit only redacted violation metadata, and retain private evidence for remediation.",
+    "on_error": "Block publication. Scanner errors, missing evidence, stale evidence, incomplete coverage, and unknown classifications are denials.",
+    "evidence_freshness": "Evidence is valid only for the exact policy SHA-256, source-manifest SHA-256, commit SHA, Git blob IDs and modes, generated artifact hashes, and sealed Pages payload SHA-256 recorded by that scan."
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "publication-operator-handoff/1",
+  "classification": "publication-tooling",
+  "release_frame": 10,
+  "integration_base": "40f1b99ac541533c23a3137c626b0624ad11e418",
+  "deployment": "nondeploy",
+  "publication_evidence": {
+    "classification": "publication-evidence-only",
+    "rapp_frame": false,
+    "claims_rapp_1_conformance": false
+  },
+  "required_check": {
+    "workflow": "Publication CI",
+    "job": "Publication gate",
+    "context": "Publication gate",
+    "strict": true
+  },
+  "operator_actions": [
+    {
+      "id": "pages-build-source",
+      "state": "needs-operator-apply",
+      "current": "legacy-branch",
+      "desired": "github-actions",
+      "release_payload": "validated deterministic artifact.tar"
+    },
+    {
+      "id": "protect-main",
+      "state": "needs-operator-apply",
+      "required_check": "Publication gate",
+      "strict": true
+    },
+    {
+      "id": "restrict-pages-environment",
+      "state": "needs-operator-apply",
+      "protected_branch": "main",
+      "custom_branch_policies": false
+    },
+    {
+      "id": "gitguardian-rappid-disposition",
+      "state": "needs-operator-apply",
+      "desired": "pending-or-narrowly-ignored",
+      "disable_scanning": false
+    }
+  ],
+  "history_rewrite": {
+    "state": "blocked",
+    "reason": "forbidden historical bytes remain reachable from public Git history",
+    "requires": "explicit-destructive-confirmation",
+    "current_tree_or_deployment_exception": false
+  }
+}

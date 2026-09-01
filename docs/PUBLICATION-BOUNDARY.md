@@ -1,0 +1,180 @@
+# Public publication boundary
+
+`/PUBLICATION-POLICY.json` is the normative, machine-readable publication
+policy for `kody-w/rapterbox-site`. This document is its human-readable
+summary. When the two differ, the JSON policy controls.
+
+## Public-eligible material
+
+Only these categories are eligible for publication:
+
+- customer-facing product summaries;
+- customer-facing terms and privacy notices;
+- waitlist pages and implementation assets, never submitted waitlist data;
+- non-confidential descriptions of the RAPP foundation/product boundary; and
+- static-site assets needed to serve those categories.
+
+A public-eligible path is not an automatic approval. Content, URL, data, and
+generated-artifact checks must all pass. Anything unclassified is denied.
+
+## Never public
+
+The site must not publish CODE RED, the LLC Constitution, the Ten
+Commandments, private doctrine, ownership administration or percentages,
+private provenance manifests, print-ready doctrine, links to private
+repositories, secrets, submitted customer data, or non-public legal data.
+
+The policy lists exact forbidden filenames, case-insensitive filename and
+phrase patterns, data detectors, forbidden URL hosts, and repository-slug
+rules. Those identifiers are scanner rules only; neither policy file contains
+source doctrine, private excerpts, or private repository identifiers.
+
+Customer-facing terms are allowed only when intentionally written for public
+customers. Privileged communications, legal matter records, signatures,
+government identifiers, and non-public contracts are not customer-facing
+terms and remain forbidden.
+
+## Names are exact
+
+- **Rappter** is singular.
+- **Rapter** is plural.
+- **RapterBox LLC** is the company.
+- **RapterBox** is also a separate company subproduct.
+- **RAPP** is the external public open-source foundation. RapterBox LLC does
+  not own RAPP. Only non-confidential foundation and product-boundary material
+  is eligible here.
+- **RAPP/1** is the protocol authority maintained at the public
+  `kody-w/rapp-1` repository.
+
+## RAPP/1 conformance boundary
+
+These policy documents are publication controls. They do not emit RAPP
+artifacts and do not claim RAPP/1 protocol conformance. They do not define,
+replace, extend, or wrap the RAPP/1 frame, wire format, identity envelope, or
+lineage model.
+
+If a public work-loop record claims RAPP/1 conformance, its frame must have
+exactly these 11 top-level keys and no others, in protocol order:
+`spec`, `kind`, `stream_id`, `seq`, `utc`, `payload`, `payload_hash`, `prev`,
+`prev_wave`, `sig`, and `frame_hash`. The `spec` value must be `rapp/1`.
+Field shapes and semantics remain authoritative in `kody-w/rapp-1`; this
+publication policy does not create an alternate envelope.
+
+`data_slush`, when used, may appear only inside `payload`. The public gate
+limits its serialized value to 16 KiB, nesting depth to four, and collection
+items to 100. It must pass every private-content, secret, customer-data,
+legal-data, and URL check.
+
+Offspring and cross outputs require a fresh identity and typed parent lineage.
+They never inherit authority. Their identity and lineage representation must
+follow RAPP/1 directly; this policy defines no local substitute.
+
+## URLs and repositories
+
+Local, loopback, and internal hosts are forbidden. Repository links are denied
+unless the repository slug is explicitly allowlisted by the policy or the scan
+records a successful unauthenticated public-visibility check for the exact
+canonical URL. Unknown, inaccessible, authenticated-only, or ambiguous
+visibility fails closed. Evidence must never disclose a private repository URL
+or slug.
+
+## Source and generated-artifact gate
+
+Scanning is required before commit, merge, deploy, and release. It covers
+selected source files and the final generated output, including bundles,
+minified files, source maps, manifests, documents, recursively unpacked
+archives, image OCR, document metadata, and redirect targets. A clean source
+scan does not replace the post-generation scan.
+
+Every publication candidate must have a coverage record. Unsupported,
+unreadable, encrypted, truncated, or skipped files fail closed.
+
+`/PUBLICATION-MANIFEST.json` is the exact, default-deny deploy inventory.
+Entries are explicitly classified as `site-content` or
+`publication-control`. The latter class is limited to the two control paths
+named by the policy exception; it does not exempt source directories, test
+fixtures, or generated files.
+
+The source guard and artifact guard have different jobs:
+
+- `scripts/publication_guard.py` checks selected tracked source bytes for the
+  forbidden filename, content, repository, secret, and PII rules. JSON and
+  JSONL are parsed strictly with duplicate-key rejection, bounded recursive
+  traversal, encoded-key normalization, and detector-specific placeholder or
+  business-contact allowances. Operational source classes receive no blanket
+  customer-data exemption.
+- `scripts/publication_artifact.py` reads only manifest-declared regular-file
+  blobs and modes from the exact Git commit tree, rejects any declared
+  worktree divergence, scans a byte-identical staging view, then seals those
+  bytes into a deterministic `artifact.tar`. Unlisted source such as
+  workflows, scripts, tests, caches, the public-IP audit document, and
+  waitlist backend helpers cannot enter the artifact.
+
+Frame 04 must upload only a staging directory produced and passed by:
+
+```bash
+python3 scripts/publication_artifact.py build-scan \
+  --source . \
+  --artifact "$RUNNER_TEMP/rapterbox-pages" \
+  --payload "$RUNNER_TEMP/rapterbox-payload/artifact.tar" \
+  --evidence "$RUNNER_TEMP/publication-artifact-evidence.json"
+```
+
+All output paths must be outside the checkout, and evidence must remain outside the
+artifact. The artifact scanner records each Git blob ID, mode, SHA-256, and
+size. A nonzero exit, absent evidence, non-`pass` result, stale
+commit/policy/manifest binding, payload substitution, or upload of the
+repository root must block deployment. The mutable staging directory is
+deleted before a final payload-only validation, and the directly uploaded
+Pages artifact contains only the already validated `artifact.tar`. The
+evidence is publication evidence only and is never a RAPP/1 frame.
+
+Frame 10 can reproduce the complete local gate with:
+
+```bash
+scripts/run_guardrail_checks.sh
+```
+
+The script uses only the repository's existing Python and shell runtimes. It
+runs the release self-test, source scan, exact artifact build-scan, public-IP
+cache-audit tests, and all publication guard tests, then removes its external
+staging directory and every generated Python bytecode cache.
+
+CI source scanning uses `/PUBLICATION-SOURCE-MANIFEST.json` as the explicit,
+default-deny classification interface. Source evidence is immediately
+validated against independently reconstructed HEAD Git objects, including
+the exact commit, policy digest, source-manifest digest, source-manifest
+class, policy classification, blob ID, mode, SHA-256, size, and counts. Pull
+requests build and validate the same exact payload but never upload a Pages
+artifact or deploy. A protected default-branch push may upload and deploy
+only the sealed payload bound to the checked push commit after every source,
+release, artifact, and evidence gate passes.
+
+Validated source and artifact evidence are retained together as an
+access-controlled CI artifact for seven days, separate from the Pages
+artifact. They are not copied into the Pages payload, are not publicly
+deployed, contain no candidate bytes or detected values, and emit no RAPP or
+RAPP/1 artifact.
+
+Frame 10 must set the repository Pages source to **GitHub Actions**, protect the
+default branch with the publication gate as a required check, and restrict the
+`github-pages` environment to protected default-branch deployments. Until
+those repository settings are applied, no branch-root Pages fallback is
+approved.
+
+Forbidden historical bytes remain reachable from public Git history. Removing
+or rewriting those refs is explicitly blocked pending separate destructive
+authorization. That history blocker does not relax any current-tree, evidence,
+payload, workflow, or deployment requirement above.
+
+## Evidence
+
+Evidence is bound to the exact policy hash, commit, and generated-artifact
+hashes. It records coverage, scanner versions, rule outcomes, hashes, and
+redacted fingerprints. It never records matched secrets, customer or legal
+values, private excerpts, or private repository identifiers.
+
+Evidence stays in access-controlled CI or security storage, not on the public
+site, in public release artifacts, or in public logs. A violation blocks
+publication and quarantines or deletes the candidate artifact. Missing, stale,
+incomplete, or errored evidence also blocks publication.

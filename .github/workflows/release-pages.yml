@@ -1,42 +1,155 @@
-name: Release pages
-
-on:
-  push:
-  pull_request:
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Verify release claims and metadata
-        run: python release-pages-selftest.py
-
-      - name: Parse public HTML
-        run: |
-          python - <<'PY'
-          from html.parser import HTMLParser
-          from pathlib import Path
-
-          class Parser(HTMLParser):
-              pass
-
-          paths = [
-              Path("index.html"),
-              Path("holo/index.html"),
-              Path("privacy/index.html"),
-              Path("support/index.html"),
-              Path("intake.html"),
-              Path("invite.html"),
-          ]
-          for path in paths:
-              parser = Parser()
-              parser.feed(path.read_text(encoding="utf-8"))
-              parser.close()
-          print(f"Parsed {len(paths)} public HTML pages")
-          PY
+{
+  "name": "Publication CI",
+  "on": {
+    "pull_request": {},
+    "push": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "publication-pages-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "defaults": {
+    "run": {
+      "shell": "bash"
+    }
+  },
+  "jobs": {
+    "gate": {
+      "name": "Publication gate",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "outputs": {
+        "checked_commit": "${{ steps.bind.outputs.checked_commit }}",
+        "pages_artifact_name": "${{ steps.bind.outputs.pages_artifact_name }}"
+      },
+      "steps": [
+        {
+          "name": "Check out exact commit",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "clean": "true",
+            "fetch-depth": "1",
+            "persist-credentials": "false",
+            "ref": "${{ github.sha }}",
+            "show-progress": "false"
+          }
+        },
+        {
+          "name": "Set up deterministic Python",
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "allow-prereleases": "false",
+            "check-latest": "false",
+            "python-version": "3.12.11"
+          }
+        },
+        {
+          "name": "Verify checked commit and runtime",
+          "run": "set -euo pipefail\ntest \"$(git rev-parse HEAD)\" = \"$GITHUB_SHA\"\npython - <<'PY'\nimport sys\nassert sys.version_info[:3] == (3, 12, 11), sys.version\nPY"
+        },
+        {
+          "name": "Initialize isolated publication paths",
+          "run": "set -euo pipefail\numask 077\ntest -n \"$RUNNER_TEMP\"\ntest -n \"$GITHUB_RUN_ID\"\ntest -n \"$GITHUB_RUN_ATTEMPT\"\nprintf 'PAGES_STAGE=%s\\n' \"$RUNNER_TEMP/rapterbox-pages-stage-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\" >> \"$GITHUB_ENV\"\nprintf 'PAGES_PAYLOAD=%s\\n' \"$RUNNER_TEMP/rapterbox-pages-payload-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/artifact.tar\" >> \"$GITHUB_ENV\"\nprintf 'PUBLICATION_EVIDENCE=%s\\n' \"$RUNNER_TEMP/publication-artifact-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json\" >> \"$GITHUB_ENV\"\nprintf 'SOURCE_EVIDENCE=%s\\n' \"$RUNNER_TEMP/publication-source-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "name": "Scan classified publication source",
+          "run": "set -euo pipefail\ntest ! -e \"$SOURCE_EVIDENCE\"\npython scripts/publication_guard.py --compact --root . --policy PUBLICATION-POLICY.json --manifest PUBLICATION-SOURCE-MANIFEST.json --output \"$SOURCE_EVIDENCE\""
+        },
+        {
+          "name": "Validate source evidence against Git objects",
+          "run": "set -euo pipefail\npython scripts/validate_publication_evidence.py source --source . --manifest PUBLICATION-SOURCE-MANIFEST.json --evidence \"$SOURCE_EVIDENCE\" --expected-commit \"$GITHUB_SHA\""
+        },
+        {
+          "name": "Verify release claims and metadata",
+          "run": "set -euo pipefail\npython release-pages-selftest.py"
+        },
+        {
+          "name": "Parse public HTML",
+          "run": "set -euo pipefail\npython - <<'PY'\nfrom html.parser import HTMLParser\nfrom pathlib import Path\n\nclass Parser(HTMLParser):\n    pass\n\npaths = [\n    Path(\"index.html\"),\n    Path(\"holo/index.html\"),\n    Path(\"privacy/index.html\"),\n    Path(\"support/index.html\"),\n    Path(\"intake.html\"),\n    Path(\"invite.html\"),\n]\nfor path in paths:\n    parser = Parser()\n    parser.feed(path.read_text(encoding=\"utf-8\"))\n    parser.close()\nprint(f\"Parsed {len(paths)} public HTML pages\")\nPY"
+        },
+        {
+          "name": "Run publication gate tests",
+          "run": "set -euo pipefail\npython -m unittest -v tests/test_publication_ci.py tests/test_publication_evidence.py tests/test_publication_artifact.py tests/test_publication_guard_source.py"
+        },
+        {
+          "name": "Build, scan, and seal exact Pages payload",
+          "run": "set -euo pipefail\ntest ! -e \"$PAGES_STAGE\"\ntest ! -e \"$PAGES_PAYLOAD\"\ntest ! -e \"$PUBLICATION_EVIDENCE\"\nmkdir -p \"$(dirname \"$PAGES_PAYLOAD\")\"\npython scripts/publication_artifact.py --compact build-scan --source . --artifact \"$PAGES_STAGE\" --payload \"$PAGES_PAYLOAD\" --evidence \"$PUBLICATION_EVIDENCE\""
+        },
+        {
+          "name": "Validate generated artifact and payload evidence",
+          "run": "set -euo pipefail\npython scripts/validate_publication_evidence.py artifact --source . --artifact \"$PAGES_STAGE\" --payload \"$PAGES_PAYLOAD\" --evidence \"$PUBLICATION_EVIDENCE\" --expected-commit \"$GITHUB_SHA\""
+        },
+        {
+          "name": "Bind gated commit",
+          "id": "bind",
+          "run": "set -euo pipefail\ntest \"$(git rev-parse HEAD)\" = \"$GITHUB_SHA\"\nprintf 'checked_commit=%s\\n' \"$GITHUB_SHA\" >> \"$GITHUB_OUTPUT\"\nprintf 'pages_artifact_name=github-pages-%s\\n' \"$GITHUB_SHA\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "Upload private publication evidence",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "compression-level": 9,
+            "if-no-files-found": "error",
+            "include-hidden-files": "false",
+            "name": "publication-evidence-${{ github.sha }}",
+            "overwrite": "false",
+            "path": "${{ env.SOURCE_EVIDENCE }}\n${{ env.PUBLICATION_EVIDENCE }}",
+            "retention-days": 7
+          }
+        },
+        {
+          "name": "Final verify immutable Pages payload",
+          "if": "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.ref_protected == true && github.sha == github.event.after }}",
+          "run": "set -euo pipefail\nrm -rf -- \"$PAGES_STAGE\"\ntest ! -e \"$PAGES_STAGE\"\ngit diff --quiet HEAD -- .\ngit diff --cached --quiet HEAD -- .\ntest -z \"$(git status --porcelain=v1 --untracked-files=all)\"\npython scripts/validate_publication_evidence.py artifact --source . --payload \"$PAGES_PAYLOAD\" --evidence \"$PUBLICATION_EVIDENCE\" --expected-commit \"$GITHUB_SHA\""
+        },
+        {
+          "name": "Upload exact Pages artifact",
+          "if": "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.ref_protected == true && github.sha == github.event.after }}",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "compression-level": 0,
+            "if-no-files-found": "error",
+            "include-hidden-files": "false",
+            "name": "github-pages-${{ github.sha }}",
+            "overwrite": "false",
+            "path": "${{ env.PAGES_PAYLOAD }}",
+            "retention-days": 1
+          }
+        }
+      ]
+    },
+    "deploy": {
+      "name": "Deploy protected default branch",
+      "needs": [
+        "gate"
+      ],
+      "if": "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.ref_protected == true && github.sha == github.event.after && needs.gate.outputs.checked_commit == github.sha }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "permissions": {
+        "contents": "read",
+        "id-token": "write",
+        "pages": "write"
+      },
+      "environment": {
+        "name": "github-pages",
+        "url": "${{ steps.deployment.outputs.page_url }}"
+      },
+      "steps": [
+        {
+          "name": "Deploy exact gated artifact",
+          "id": "deployment",
+          "uses": "actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
+          "with": {
+            "artifact_name": "${{ needs.gate.outputs.pages_artifact_name }}",
+            "preview": "false",
+            "timeout": "600000"
+          }
+        }
+      ]
+    }
+  }
+}
