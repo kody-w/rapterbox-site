@@ -15,8 +15,10 @@ from typing import Any, Mapping, Sequence
 
 if __package__:
     from . import publication_artifact
+    from . import publication_guard
 else:
     import publication_artifact
+    import publication_guard
 
 
 ARTIFACT_BOUNDARY = publication_artifact.ARTIFACT_BOUNDARY
@@ -186,13 +188,20 @@ def validate_source_evidence(
     expected_keys = {
         "artifact_boundary",
         "binary_paths",
+        "coverage_records",
         "finding_count",
         "findings",
         "policy_loaded",
         "result",
+        "scan_completed_at",
+        "scan_counts",
+        "scan_started_at",
         "scanned_path_count",
+        "scanner_name",
+        "scanner_version",
         "schema_version",
         "skipped_paths",
+        "source_file_count",
         "text_paths",
         "unscanned_paths",
     }
@@ -207,6 +216,11 @@ def validate_source_evidence(
         or evidence.get("unscanned_paths") != []
         or evidence.get("skipped_paths") != []
         or evidence.get("policy_loaded") is not True
+        or evidence.get("scan_started_at") is not None
+        or evidence.get("scan_completed_at") is not None
+        or evidence.get("scanner_name") != publication_guard.SCANNER_NAME
+        or evidence.get("scanner_version") != publication_guard.SCANNER_VERSION
+        or evidence.get("source_file_count") != len(files)
     ):
         _fail("source_evidence_not_pass")
     scanned = evidence.get("text_paths")
@@ -217,6 +231,57 @@ def validate_source_evidence(
         _fail("source_evidence_inventory")
     if evidence.get("scanned_path_count") != len(files):
         _fail("source_evidence_count")
+
+    counts = evidence.get("scan_counts")
+    if counts != {
+        "classified_paths": len(files),
+        "findings": 0,
+        "scanned_paths": len(files),
+        "selected_paths": len(files),
+        "unscanned_paths": 0,
+    }:
+        _fail("source_evidence_count")
+
+    records = evidence.get("coverage_records")
+    record_keys = {
+        "artifact_disposition",
+        "artifact_manifest_class",
+        "category",
+        "content_contract",
+        "media_type",
+        "origin",
+        "path",
+        "scanner_status",
+        "sha256",
+        "size",
+    }
+    if not isinstance(records, list) or len(records) != len(files):
+        _fail("source_evidence_coverage")
+    record_paths: list[str] = []
+    for record in records:
+        if (
+            not isinstance(record, Mapping)
+            or set(record) != record_keys
+            or not isinstance(record.get("path"), str)
+            or record.get("origin") != "selected-source"
+            or record.get("scanner_status") != "pass"
+            or not isinstance(record.get("category"), str)
+            or not isinstance(record.get("content_contract"), str)
+            or not isinstance(record.get("media_type"), str)
+            or not isinstance(record.get("artifact_disposition"), str)
+            or (
+                record.get("artifact_manifest_class") is not None
+                and not isinstance(record.get("artifact_manifest_class"), str)
+            )
+            or not isinstance(record.get("sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", record["sha256"]) is None
+            or not isinstance(record.get("size"), int)
+            or record["size"] < 0
+        ):
+            _fail("source_evidence_coverage")
+        record_paths.append(record["path"])
+    if record_paths != files:
+        _fail("source_evidence_coverage")
     return {"source_file_count": len(files)}
 
 

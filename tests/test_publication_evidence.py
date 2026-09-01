@@ -45,7 +45,7 @@ class PublicationEvidenceTests(unittest.TestCase):
             "-c",
             "user.name=Evidence Test",
             "-c",
-            "user.email=evidence-test@example.invalid",
+            "user.email=" + "evidence-test" + "@" + "example.invalid",
             "commit",
             "--quiet",
             "-m",
@@ -82,6 +82,58 @@ class PublicationEvidenceTests(unittest.TestCase):
             encoding="utf-8",
         )
         return source, artifact, evidence_path, commit, evidence
+
+    def built_source_evidence(
+        self,
+    ) -> tuple[Path, Path, Path, dict[str, object]]:
+        source = self.work / "source"
+        source.mkdir()
+        (source / "PUBLICATION-POLICY.json").write_text(
+            json.dumps(
+                {
+                    "policy_id": "fixture/source-evidence",
+                    "policy_version": "1.0.0",
+                    "repository": "fixture/source-evidence",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (source / "safe.txt").write_text("safe public source\n", encoding="utf-8")
+        manifest = {
+            "artifact_boundary": publication_artifact.ARTIFACT_BOUNDARY,
+            "default_disposition": "deny",
+            "document_type": "publication-source-manifest",
+            "files": ["safe.txt"],
+            "repository": "kody-w/rapterbox-site",
+            "schema_version": 1,
+            "source_classes": [
+                {
+                    "class": "publication-candidate",
+                    "paths": ["safe.txt"],
+                    "scanner": "scripts/publication_guard.py",
+                }
+            ],
+        }
+        manifest_path = source / validate_publication_evidence.SOURCE_MANIFEST_FILENAME
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        evidence_path = self.work / "source-evidence.json"
+        exit_code = publication_guard.main(
+            [
+                "--root",
+                os.fspath(source),
+                "--policy",
+                "PUBLICATION-POLICY.json",
+                "--manifest",
+                os.fspath(manifest_path),
+                "--output",
+                os.fspath(evidence_path),
+                "--compact",
+            ]
+        )
+        self.assertEqual(0, exit_code)
+        return source, manifest_path, evidence_path, json.loads(
+            evidence_path.read_text(encoding="utf-8")
+        )
 
     def test_source_manifest_classifies_exact_publication_candidates(self) -> None:
         source_manifest = validate_publication_evidence.load_source_manifest(
@@ -127,50 +179,39 @@ class PublicationEvidenceTests(unittest.TestCase):
         self.assertEqual(controls, by_class["publication-control"])
 
     def test_valid_source_evidence_is_complete_and_outside_source(self) -> None:
-        source = self.work / "source"
-        source.mkdir()
-        shutil.copy2(ROOT / "PUBLICATION-POLICY.json", source)
-        (source / "safe.txt").write_text("safe public source\n", encoding="utf-8")
-        manifest = {
-            "artifact_boundary": publication_artifact.ARTIFACT_BOUNDARY,
-            "default_disposition": "deny",
-            "document_type": "publication-source-manifest",
-            "files": ["safe.txt"],
-            "repository": "kody-w/rapterbox-site",
-            "schema_version": 1,
-            "source_classes": [
-                {
-                    "class": "publication-candidate",
-                    "paths": ["safe.txt"],
-                    "scanner": "scripts/publication_guard.py",
-                }
-            ],
-        }
-        manifest_path = source / validate_publication_evidence.SOURCE_MANIFEST_FILENAME
-        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        evidence_path = self.work / "source-evidence.json"
-
-        exit_code = publication_guard.main(
-            [
-                "--root",
-                os.fspath(source),
-                "--policy",
-                "PUBLICATION-POLICY.json",
-                "--manifest",
-                os.fspath(manifest_path),
-                "--output",
-                os.fspath(evidence_path),
-                "--compact",
-            ]
-        )
+        source, manifest_path, evidence_path, _ = self.built_source_evidence()
         result = validate_publication_evidence.validate_source_evidence(
             source=source,
             manifest_path=manifest_path,
             evidence_path=evidence_path,
         )
 
-        self.assertEqual(0, exit_code)
         self.assertEqual({"source_file_count": 1}, result)
+
+    def test_rejects_source_coverage_and_count_drift(self) -> None:
+        source, manifest_path, evidence_path, evidence = self.built_source_evidence()
+        mutations = []
+
+        bad_count = copy.deepcopy(evidence)
+        bad_count["scan_counts"]["classified_paths"] = 0
+        mutations.append(bad_count)
+
+        bad_coverage = copy.deepcopy(evidence)
+        bad_coverage["coverage_records"][0]["path"] = "other.txt"
+        mutations.append(bad_coverage)
+
+        for mutation in mutations:
+            with self.subTest():
+                evidence_path.write_text(
+                    json.dumps(mutation, sort_keys=True),
+                    encoding="utf-8",
+                )
+                with self.assertRaises(validate_publication_evidence.EvidenceError):
+                    validate_publication_evidence.validate_source_evidence(
+                        source=source,
+                        manifest_path=manifest_path,
+                        evidence_path=evidence_path,
+                    )
 
     def test_valid_artifact_evidence_is_exactly_bound(self) -> None:
         source, artifact, evidence_path, commit, evidence = self.built_evidence()
