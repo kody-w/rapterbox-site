@@ -1,0 +1,42 @@
+name: Release pages
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify release claims and metadata
+        run: python release-pages-selftest.py
+
+      - name: Parse public HTML
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Parser(HTMLParser):
+              pass
+
+          paths = [
+              Path("index.html"),
+              Path("holo/index.html"),
+              Path("privacy/index.html"),
+              Path("support/index.html"),
+              Path("intake.html"),
+              Path("invite.html"),
+          ]
+          for path in paths:
+              parser = Parser()
+              parser.feed(path.read_text(encoding="utf-8"))
+              parser.close()
+          print(f"Parsed {len(paths)} public HTML pages")
+          PY

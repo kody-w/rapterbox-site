@@ -6,17 +6,21 @@
     "organization": "RapterBox LLC",
     "since": "2026-08-24"
   },
-  "what_this_is": "The public company and product portfolio for RapterBox LLC. The consumer Holo species product lives at rappter.com; the local business-twin product remains at rapterbox.com.",
+  "what_this_is": "The public company and product portfolio for RapterBox LLC. The current Holo Zoo release boundary and local business-twin product live at rapterbox.com.",
   "human_view": "https://rapterbox.com/",
   "agent_view": "https://rapterbox.com/agent.json",
+  "foundation": {
+    "public_boundary": "https://rapterbox.com/rapp",
+    "rapp_foundation": "https://github.com/kody-w/RAPP",
+    "protocol_authority": "https://github.com/kody-w/rapp-1"
+  },
   "products": [
     {
       "id": "first-dimension",
-      "name": "Genesis 251 First Edition / First Dimension",
-      "human_view": "https://rappter.com/",
-      "api": "https://kody-w.github.io/holodex/",
-      "state": "sealed-catalog-publication",
-      "what": "251 signed First Edition Originals and shadow previews, currently issuer-held, untransferred, and undiscovered; cleared Holo reveals, exact Original title transfers, separately issued offspring, jobs, tips, paid evolution, DOGG certification, and dealers follow separate gates"
+      "name": "Holo Zoo: Rolling Cores",
+      "human_view": "https://rapterbox.com/holo/",
+      "state": "adult-internal-testflight",
+      "what": "offline Holo Field, four local Houses, commerce-free Companion mode, local playback and history, import/export, and a non-executing work-interface walkthrough; real commerce, resale, production jobs, tips, sponsorship, public publication, Coin economics, and external interoperability are disabled"
     },
     {
       "id": "business-box",
@@ -24,16 +28,19 @@
       "human_view": "https://rapterbox.com/#business",
       "state": "waitlist",
       "what": "a local-first business twin that handles bounded reversible admin work and sends one morning brief"
+    },
+    {
+      "id": "rbox-intake",
+      "name": "RBox Intake",
+      "human_view": "https://rapterbox.com/intake",
+      "state": "lead-intake",
+      "what": "selective workspace discovery, migration planning, side-by-side verification, and ongoing RBox adaptation care; the public form accepts interest only, never device contents or credentials"
     }
   ],
   "streams": {
     "lessons": {
       "url": "https://rapterbox.com/lessons.jsonl",
       "what": "published operational knowledge as RAPP/1 frames"
-    },
-    "holodex-release": {
-      "url": "https://kody-w.github.io/holodex/api/v1/release/latest.json",
-      "what": "current public First Dimension release stamp"
     }
   },
   "offers": [
@@ -48,6 +55,7 @@
         "fields": {
           "name": "string, required",
           "email": "string, required",
+          "phone": "string, optional",
           "note": "string, optional",
           "source": "string, set to rapterbox.com-business"
         },
@@ -55,23 +63,40 @@
       }
     },
     {
-      "id": "first-dimension",
+      "id": "rbox-intake-interest",
       "state": "open",
-      "what": "Explore the signed species catalog or request future cleared reveals.",
-      "human_equivalent": "https://rappter.com/"
+      "what": "Request a human review for initial RBox Intake, a migration build, or ongoing RBox Care. Do not submit credentials, files, device exports, or customer data.",
+      "act": {
+        "method": "POST",
+        "url": "https://formspree.io/f/mgawgado",
+        "content_type": "application/json",
+        "fields": {
+          "name": "string, required",
+          "email": "string, required",
+          "business_shape": "one-person | 2-10 | 11-50 | other",
+          "current_workspace": "mac | windows | mixed | unsure",
+          "interest": "intake | migration | care | unsure",
+          "note": "workflow description only, optional",
+          "source": "string, set to rapterbox.com-intake"
+        },
+        "human_equivalent": "https://rapterbox.com/intake"
+      },
+      "consent": "Only submit on behalf of a human who explicitly asked you to. The form is a service lead, not authorization to inspect or upload a device."
     }
   ],
   "capabilities_you_may_use": [
     "read this document and listed public streams",
     "join the business waitlist only on an explicit human request",
-    "direct Holo species requests to rappter.com"
+    "request an RBox Intake review only on an explicit human request",
+    "read the current Holo Zoo release boundary at rapterbox.com/holo/"
   ],
   "this_twin_will_never": [
     "expose private GODD data",
     "accept credentials in public forms",
     "represent Holo species as company shares",
-    "publish unrevealed Holo or Growl plaintext"
+    "publish unrevealed Holo or Growl plaintext",
+    "activate Holo Zoo commerce or public services from the current internal build"
   ],
-  "privacy": "Public resources pass deny-by-default publication gates. Customer content, credentials, private histories, and private strategy never enter these pages.",
+  "privacy": "Holo Zoo's current adult internal TestFlight has no account, real commerce, GPS, map provider, public sharing, or automatic RapterBox telemetry. Website forms use Formspree only after explicit submission and are documented at rapterbox.com/privacy/. Public resources pass deny-by-default publication gates.",
   "protocol": "https://github.com/kody-w/rapp-1"
 }

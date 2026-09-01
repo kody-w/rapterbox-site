@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RapterBox LLC values</title>
+<meta name="description" content="The operating values and stop rules that govern RapterBox LLC products, revenue, autonomy, privacy, and customer relationships.">
+<link rel="canonical" href="https://rapterbox.com/values/">
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cp-bg);color:var(--cp-text);font:17px/1.62 "Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif}
+a{color:var(--cp-accent)}
+.shell{width:min(76rem,calc(100% - 2rem));margin:auto}
+header{display:flex;justify-content:space-between;gap:1rem;padding:1.2rem 0;border-bottom:1px solid var(--cp-border)}
+header a{text-decoration:none;font-weight:800}
+main{padding:5rem 0}
+.eyebrow{color:var(--cp-accent);font:700 .78rem/1.2 Consolas,"Courier New",Courier,monospace;letter-spacing:.14em}
+h1{max-width:13ch;margin:.8rem 0 1.4rem;font-size:clamp(3rem,8vw,6rem);line-height:.96;letter-spacing:-.06em}
+h2{margin:0 0 .7rem;font-size:1.4rem}
+.lede{max-width:52rem;color:var(--cp-text-soft);font-size:1.2rem}
+.core{margin:2rem 0;padding:1.4rem;border-left:.35rem solid var(--cp-accent);background:var(--cp-accent-soft);font-size:1.15rem}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:2rem}
+.card{padding:1.3rem;border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);box-shadow:var(--cp-shadow)}
+.card p{margin:0;color:var(--cp-text-soft)}
+.stop{margin-top:2rem;padding:1.4rem;border:1px solid var(--cp-border-strong);border-radius:16px;background:var(--cp-surface)}
+.links{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:2rem}
+.button{display:inline-flex;min-height:2.8rem;align-items:center;padding:.7rem 1rem;border:1px solid var(--cp-accent);border-radius:.625rem;background:var(--cp-accent);color:var(--cp-accent-fg);font-weight:800;text-decoration:none}
+.button.secondary{border-color:var(--cp-border);background:var(--cp-surface);color:var(--cp-text)}
+footer{padding:2rem 0;border-top:1px solid var(--cp-border);color:var(--cp-text-soft);font-size:.85rem}
+@media(max-width:700px){main{padding:3rem 0}.grid{grid-template-columns:1fr}header{flex-direction:column}}
+</style>
+</head>
+<body>
+<header class="shell"><a href="/">R/ RapterBox LLC</a><a href="/support/">Support</a></header>
+<main class="shell">
+  <p class="eyebrow">COMPANY VALUES / OPERATING TESTS</p>
+  <h1>Useful. Proved. Voluntary.</h1>
+  <p class="lede">These are constraints on how RapterBox builds, sells, automates, and grows. They apply most when revenue, speed, or attention creates pressure to compromise.</p>
+  <div class="core"><strong>The company carries the need.</strong> Revenue pressure belongs to RapterBox, not to a customer, player, family, employee, or companion as an emotional obligation. We earn payment by creating durable value, never by making departure hurt.</div>
+  <div class="grid">
+    <article class="card"><h2>Paid usefulness</h2><p>We charge for working products, accountable service, infrastructure, recovery, and verified outcomes. We do not create pain, guilt, or artificial scarcity and then sell relief.</p></article>
+    <article class="card"><h2>Proof before claim</h2><p>A skeptical person should be able to inspect the evidence, provenance, limits, and integrated result. Storytelling never converts a hypothesis into a fact.</p></article>
+    <article class="card"><h2>Voluntary return</h2><p>Products may be intensely compelling because they are useful, trusted, beautiful, and meaningful. We reject streak loss, notification guilt, emotional withdrawal, and dependency mechanics.</p></article>
+    <article class="card"><h2>Local sovereignty</h2><p>Core custody, history, export, recovery, and ordinary use should survive a vendor dashboard, provider change, or temporary loss of network.</p></article>
+    <article class="card"><h2>Bounded autonomy</h2><p>Authority, budget, evidence, stop conditions, rollback, and escalation are explicit before consequential action. A human or legal principal remains accountable.</p></article>
+    <article class="card"><h2>People leave whole</h2><p>Export, deletion, recovery evidence, privacy controls, and ordinary exit stay understandable and usable. Captive data is not a retention strategy.</p></article>
+    <article class="card"><h2>Quiet usefulness</h2><p>We optimize useful outcomes and clear endings, not raw time, infinite feeds, paid reach, follower pressure, or notifications engineered to pull people back.</p></article>
+    <article class="card"><h2>Honest boundaries</h2><p>Drafts, simulations, disabled capabilities, digital claims, and scientific hypotheses are labeled exactly as such. We do not sell inevitability.</p></article>
+    <article class="card"><h2>Reversible speed</h2><p>Move as quickly as evidence allows. Increase caution with blast radius, irreversibility, privacy exposure, financial consequence, and human risk.</p></article>
+    <article class="card"><h2>Long stewardship</h2><p>Build for repair, portability, succession, and the next custodian. Short-term growth may not consume the trust or control they will need.</p></article>
+  </div>
+  <section class="stop">
+    <h2>Stop rule</h2>
+    <p>If a feature, deal, campaign, or automation needs emotional coercion, concealed risk, unverifiable claims, captive custody, paid affection, or unbounded authority to work, it does not ship.</p>
+  </section>
+  <div class="links">
+    <a class="button" href="/holo/">See Holo Zoo</a>
+    <a class="button secondary" href="/privacy/">Privacy</a>
+    <a class="button secondary" href="/support/">Support</a>
+  </div>
+</main>
+<footer class="shell">RapterBox LLC &middot; Intelligence people can own, verify, recover, and leave without punishment.</footer>
+</body>
+</html>
